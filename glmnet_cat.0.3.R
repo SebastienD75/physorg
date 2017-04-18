@@ -41,10 +41,6 @@ setwd("~/Dev/R - Phys.org")
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                     'Materials Science')
   
-  
-  
-
-  
   param.categories <- levels(d.art.c.bench$category)
   
   if(!exists('bench.model')) 
@@ -52,24 +48,36 @@ setwd("~/Dev/R - Phys.org")
     bench.model <- list()
   }
   
-  param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
-  param.maxmodel = 5
+  # param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+  param.pctdata.inc <- c(0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+  param.maxmodel = 3
   
-  param.dofeaturehashing = TRUE
+  param.dofeaturehashing = FALSE
+  param.doprune = TRUE
+  param.dongram = FALSE
   param.pctdata.init <- 0
   param.train_test <- 0.7
-  init.param.bench.glmnet.NFOLDS = 4
+  
+  init.param.pctdata = 0.03
+  
+  init.param.bench.glmnet.NFOLDS = 3
   init.param.bench.glmnet.THRESH = 1e-3 # (default 1E-7)
   init.param.bench.glmnet.MAXIT =  10e3 # (default 10^5)
+  
+  init.prune.term_count_min = 20 
+  init.prune.doc_proportion_max = 0.6 # 0.7
+  init.prune.doc_proportion_min = 0.0005
+  
   init.model_num = 1
   model_desc = ''
-  param.startmodel = ceiling(length(bench.model)/2 + 1)
+  #param.startmodel = ceiling(length(bench.model)/2 + 1)
+  param.startmodel = 1
   param.seed = 20170416
-
+  
   set.seed(param.seed)
   
 }
-  
+
 # FUNCTIONS  -------------------------------------------------------------------
 {
   save_model <- function(model_name) 
@@ -90,7 +98,7 @@ setwd("~/Dev/R - Phys.org")
     bench.model[[model_name]]$bench.dtm_test.time <<- bench.dtm_test.time
     bench.model[[model_name]]$bench.dtm_train.dim <<- dim(bench.dtm_train)
     bench.model[[model_name]]$bench.dtm_test.dim <<- dim(bench.dtm_test)
-    bench.model[[model_name]]$bench.vectorizer <<- bench.h_vectorizer
+    bench.model[[model_name]]$bench.vectorizer <<- bench.vectorizer
     bench.model[[model_name]]$bench.glmnet_classifier.time <<- bench.glmnet_classifier.time
     bench.model[[model_name]]$bench.glmnet_classifier <<- bench.glmnet_classifier
     bench.model[[model_name]]$bench.preds.class.time <<- bench.preds.class.time
@@ -158,11 +166,12 @@ for(i in param.startmodel:param.maxmodel)
                            ids = bench.train$id,
                            progressbar = FALSE)
   
-  bench.it_test = bench.test$content %>% 
+  bench.it_test <- bench.test$content %>% 
     word_tokenizer %>%
     itoken(ids = bench.test$id, progressbar = FALSE)
   
   if(param.dofeaturehashing) {
+    
     bench.h_vectorizer = hash_vectorizer(hash_size = 2 ^ 14, ngram = c(1L, 2L))
     bench.vectorizer <- bench.h_vectorizer
     
@@ -174,8 +183,37 @@ for(i in param.startmodel:param.maxmodel)
       bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
     ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
     
+    
   } else {
-    bench.vectorizer <- vocab_vectorizer(bench.train.vocab)
+    
+    
+    if(param.dongram) {
+      
+      bench.train.vocab.stem.time <- system.time(
+        bench.train.vocab.stem<- create_vocabulary(bench.it_train, ngram = c(1L, 2L))
+      ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+      
+    } else {
+      
+      bench.train.vocab.stem.time <- system.time(
+        bench.train.vocab.stem <- create_vocabulary(bench.it_train)
+      ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+      
+    }
+    
+    if(param.doprune) {
+      
+      bench.train.vocab.stem.prune.time <- system.time(
+        bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
+                                                   term_count_min = init.prune.term_count_min,
+                                                   doc_proportion_max = init.prune.doc_proportion_max,
+                                                   doc_proportion_min = init.prune.doc_proportion_min)
+      ); print(sprintf('bench.train.vocab.stem.prune.time: %0.2fs', bench.train.vocab.stem.prune.time[[3]]))
+      
+    }
+    
+    bench.vectorizer <- vocab_vectorizer(bench.train.vocab.stem)
+    
     bench.dtm_train.time <- system.time(
       bench.dtm_train<-create_dtm(bench.it_train, bench.vectorizer)
     ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
@@ -187,7 +225,7 @@ for(i in param.startmodel:param.maxmodel)
   
   gc()
   
-  # --------------- naiveBayes KO => prediction très très long... et "Accuracy : 9.60 %" pour 4646 articles ...
+  # --------------- naiveBayes KO => prediction tr?s tr?s long... et "Accuracy : 9.60 %" pour 4646 articles ...
   
   # bench.naivebayes_classifier <- naiveBayes(x = as.matrix(bench.dtm_train),
   #                                           y = as.factor(bench.train[['category']]),
@@ -209,7 +247,7 @@ for(i in param.startmodel:param.maxmodel)
   # 
   # print(res)
   
-  # --------------- svm pour 4646 articles très long !! ... KO memoire
+  # --------------- svm pour 4646 articles tr?s long !! ... KO memoire
   
   # bench.ksvmclass_classifier.time <- system.time(
   #   bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train), y = as.vector(bench.train[['category']]))
@@ -235,61 +273,12 @@ for(i in param.startmodel:param.maxmodel)
   # 
   # gc()
   
-  # --------------- glmnet 1 
-  
-  model_num <- 1
-  param.bench.glmnet.NFOLDS = init.param.bench.glmnet.NFOLDS
-  param.bench.glmnet.THRESH = init.param.bench.glmnet.THRESH
-  param.bench.glmnet.MAXIT =  init.param.bench.glmnet.MAXIT
-  mode_desc <- sprintf('model %d - text2vect + Feature hashing + cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
-                       model_num,
-                       param.bench.glmnet.NFOLDS,
-                       param.bench.glmnet.THRESH,
-                       param.bench.glmnet.MAXIT)
-  
-  print(mode_desc)
-  bench.glmnet_classifier.time <- system.time(
-    bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train, y = bench.train[['category']], 
-                                       # family = 'binomial',                              
-                                       family = 'multinomial', 
-                                       type.multinomial="grouped", 
-                                       # L1 penalty
-                                       alpha = 1,
-                                       # ROC curve
-                                       type.measure = "auc",
-                                       nfolds = param.bench.glmnet.NFOLDS,
-                                       thresh = param.bench.glmnet.THRESH,
-                                       maxit = param.bench.glmnet.MAXIT)
+  model_name <- paste0(as.character(i), as.character(length(bench.model) + 1))
+  model_num <- as.numeric(model_name)
     
-  ); print(sprintf('bench.glmnet_classifier.time: %0.2fs', bench.glmnet_classifier.time[[3]]))
-
-  plot(bench.glmnet_classifier)
-  
-  bench.preds.class.time <- system.time(
-    bench.test$bench.preds.class <-  predict(bench.glmnet_classifier, bench.dtm_test, s = "lambda.min", type = 'class')
-  ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
-  
-  bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-  print(bench.glmnet_classifier.accuracy)
-  
-  res <- bench.test %>%
-    mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-    group_by(category) %>%
-    summarise(n = n(),
-              pct = 100*n/dim(bench.test)[[1]],
-              accurate = sum(accurate),
-              accuracy = (100*accurate/n)) %>%
-    arrange(-accuracy)
-  
-  print(res)
-  
-  save_model(paste0(as.character(i),as.character(model_num)))
-  
-  gc()
-  
-  # --------------- glmnet 1 bis : avec tfidf
-  
-  model_num <- 11
+  param.bench.glmnet.THRESH <- init.param.bench.glmnet.THRESH
+  param.bench.glmnet.MAXIT <- init.param.bench.glmnet.MAXIT
+  param.bench.glmnet.NFOLDS <- init.param.bench.glmnet.NFOLDS
   mode_desc <- sprintf('model %d - text2vect + Feature hashing + tfidf + cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
                        model_num,
                        param.bench.glmnet.NFOLDS,
@@ -339,113 +328,7 @@ for(i in param.startmodel:param.maxmodel)
   
   print(res)
   
-  save_model(paste0(as.character(i),as.character(model_num)))
-  
-  gc()
-  
-  # --------------- glmnet 2 avec modification des paramètres
-  
-  model_num <- 2
-  param.bench.glmnet.NFOLDS = init.param.bench.glmnet.NFOLDS
-  param.bench.glmnet.THRESH = 1e-5
-  param.bench.glmnet.MAXIT =  10e4
-  mode_desc <- sprintf('model %d - text2vect + Feature hashing cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
-                       model_num,
-                       param.bench.glmnet.NFOLDS,
-                       param.bench.glmnet.THRESH,
-                       param.bench.glmnet.MAXIT)
-  print(mode_desc)
-  bench.glmnet_classifier.time <- system.time(
-    bench.glmnet_classifier<-cv.glmnet(x = bench.dtm_train, y = bench.train[['category']], 
-                                       # family = 'binomial',                              
-                                       family = 'multinomial', 
-                                       type.multinomial="grouped", 
-                                       # L1 penalty
-                                       alpha = 1,
-                                       # ROC curve
-                                       type.measure = "auc",
-                                       nfolds = param.bench.glmnet.NFOLDS,
-                                       thresh = param.bench.glmnet.THRESH,
-                                       maxit = param.bench.glmnet.MAXIT
-                                       )
-    
-  ); print(sprintf('bench.glmnet_classifier.time: %0.2fs', bench.glmnet_classifier.time[[3]]))
-  
-  plot(bench.glmnet_classifier)
-  
-  bench.test$bench.preds.class = predict(bench.glmnet_classifier, bench.dtm_test, s = "lambda.min", type = 'class')
-  
-  bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-  print(bench.glmnet_classifier.accuracy)
-  
-  res <- bench.test %>%
-    mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-    group_by(category) %>%
-    summarise(n = n(),
-              pct = 100*n/dim(bench.test)[[1]],
-              accurate = sum(accurate),
-              accuracy = (100*accurate/n)) %>%
-    arrange(-accuracy)
-  
-  print(res)
-  
-  save_model(paste0(as.character(i),as.character(model_num)))
-  
-  gc()
-  
-  # --------------- glmnet 1 bis : avec tfidf
-  
-  model_num <- 21
-  mode_desc <- sprintf('model %d - text2vect + Feature hashing + tfidf + cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
-                       model_num,
-                       param.bench.glmnet.NFOLDS,
-                       param.bench.glmnet.THRESH,
-                       param.bench.glmnet.MAXIT)
-  print(mode_desc)
-  tfidf = TfIdf$new()
-  bench.dtm_train.tfidf = fit_transform(bench.dtm_train, tfidf)
-  # tfidf modified by fit_transform() call!
-  # apply pre-trained tf-idf transformation to test data
-  bench.dtm_test.tfidf  = create_dtm(bench.it_test, bench.vectorizer) %>% 
-    transform(tfidf)
-  
-  
-  bench.glmnet_classifier.time <- system.time(
-    bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train.tfidf, y = bench.train[['category']], 
-                                         # family = 'binomial',                              
-                                         family = 'multinomial', 
-                                         type.multinomial="grouped", 
-                                         # L1 penalty
-                                         alpha = 1,
-                                         # ROC curve
-                                         type.measure = "auc",
-                                         nfolds = param.bench.glmnet.NFOLDS,
-                                         thresh = param.bench.glmnet.THRESH,
-                                         maxit = param.bench.glmnet.MAXIT)
-    
-  ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fs', bench.glmnet_classifier.time[[3]]))
-  
-  plot(bench.glmnet_classifier)
-  
-  bench.preds.class.time <- system.time(
-    bench.test$bench.preds.class <-  predict(bench.glmnet_classifier, bench.dtm_test.tfidf, s = "lambda.min", type = 'class')
-  ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
-  
-  bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-  print(bench.glmnet_classifier.accuracy)
-  
-  res <- bench.test %>%
-    mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-    group_by(category) %>%
-    summarise(n = n(),
-              pct = 100*n/dim(bench.test)[[1]],
-              accurate = sum(accurate),
-              accuracy = (100*accurate/n)) %>%
-    arrange(-accuracy)
-  
-  print(res)
-  
-  save_model(paste0(as.character(i),as.character(model_num)))
+  save_model(model_name)
   
   gc()
   
