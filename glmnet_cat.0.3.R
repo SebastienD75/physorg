@@ -41,6 +41,7 @@
                     'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                     'Materials Science')
+  param.dorpsc <- c('')
   
   param.categories <- levels(d.art.c.bench$category)
   
@@ -49,15 +50,13 @@
     bench.model <- list()
   }
   
-  # param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
-  param.pctdata.inc <- c(0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+  # param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+  param.pctdata.inc <- c(0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6)
   param.maxmodel = 15
   
   param.dofeaturehashing = FALSE
   param.doprune = TRUE
-  param.dongram = TRUE
-  param.pctdata.init <- 0
-  param.train_test <- 0.7
+  param.dongram = FALSE
   
   init.param.pctdata = 0.03
   
@@ -65,10 +64,12 @@
   init.param.bench.glmnet.THRESH = 1e-4 # (default 1E-7)
   init.param.bench.glmnet.MAXIT =  10e4 # (default 10^5)
   
-  init.prune.term_count_min = 20 
-  init.prune.doc_proportion_max = 0.6 # 0.7
-  init.prune.doc_proportion_min = 0.0005
+  init.param.prune.term_count_min = 20
+  init.param.prune.doc_proportion_max = 0.6
+  init.param.prune.doc_proportion_min = 0.0005
   
+  param.pctdata.init <- 0
+  param.train_test <- 0.7
   init.model_num = 1
   model_desc = ''
   #param.startmodel = ceiling(length(bench.model)/2 + 1)
@@ -85,20 +86,26 @@
 {
   save_model <- function(model_name) 
   {
-    bench.model[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
-    bench.model[[model_name]]$param.doprune <<- param.doprune
-    bench.model[[model_name]]$param.dongram <<- param.dongram
-    bench.model[[model_name]]$param.pctdata <<- param.pctdata
+    bench.model[[model_name]]$model_name <<- model_name
     bench.model[[model_name]]$model_num <<- model_num
     bench.model[[model_name]]$mode_desc <<- mode_desc
-    bench.model[[model_name]]$param.pctdata.inc <<- param.pctdata.inc
-    bench.model[[model_name]]$model_name <<- model_name
-    bench.model[[model_name]]$param.categories <<- param.categories
-    bench.model[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
-    bench.model[[model_name]]$param.train_test <<- param.train_test
+    
     bench.model[[model_name]]$param.bench.glmnet.NFOLDS <<- param.bench.glmnet.NFOLDS
     bench.model[[model_name]]$param.bench.glmnet.THRESH <<- param.bench.glmnet.THRESH
     bench.model[[model_name]]$param.bench.glmnet.MAXIT <<- param.bench.glmnet.MAXIT
+    
+    bench.model[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
+    bench.model[[model_name]]$param.dongram <<- param.dongram
+    bench.model[[model_name]]$param.doprune <<- param.doprune
+    bench.model[[model_name]]$param.prune.term_count_min <<- param.prune.term_count_min
+    bench.model[[model_name]]$param.prune.doc_proportion_max <<- param.prune.doc_proportion_max
+    bench.model[[model_name]]$param.prune.doc_proportion_min <<- param.prune.doc_proportion_min
+    
+    bench.model[[model_name]]$param.pctdata <<- param.pctdata
+    bench.model[[model_name]]$param.train_test <<- param.train_test
+    bench.model[[model_name]]$param.categories <<- param.categories
+    bench.model[[model_name]]$param.dorpsc <<- param.dorpsc
+    
     bench.model[[model_name]]$bench.train_tokens.time <<- bench.train_tokens.time
     bench.model[[model_name]]$bench.dtm_train.time <<- bench.dtm_train.time
     bench.model[[model_name]]$bench.dtm_test.time <<- bench.dtm_test.time
@@ -209,11 +216,15 @@ for(i in param.startmodel:param.maxmodel)
     
     if(param.doprune) {
       
+      param.prune.term_count_min = init.param.prune.term_count_min
+      param.prune.doc_proportion_max = init.param.prune.doc_proportion_max
+      param.prune.doc_proportion_min = init.param.prune.doc_proportion_min
+      
       bench.train.vocab.stem.prune.time <- system.time(
         bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
-                                                   term_count_min = init.prune.term_count_min,
-                                                   doc_proportion_max = init.prune.doc_proportion_max,
-                                                   doc_proportion_min = init.prune.doc_proportion_min)
+                                                   term_count_min = param.prune.term_count_min,
+                                                   doc_proportion_max = param.prune.doc_proportion_max,
+                                                   doc_proportion_min = param.prune.doc_proportion_min)
       ); print(sprintf('bench.train.vocab.stem.prune.time: %0.2fs', bench.train.vocab.stem.prune.time[[3]]))
       
     }
@@ -231,65 +242,25 @@ for(i in param.startmodel:param.maxmodel)
   
   gc()
   
-  # --------------- naiveBayes KO => prediction tr?s tr?s long... et "Accuracy : 9.60 %" pour 4646 articles ...
-  
-  # bench.naivebayes_classifier <- naiveBayes(x = as.matrix(bench.dtm_train),
-  #                                           y = as.factor(bench.train[['category']]),
-  #                                           method="class")
-  # 
-  # bench.test$bench.preds.class <-  predict(bench.naivebayes_classifier, as.matrix(bench.dtm_test))
-  # #bench.test$bench.preds.class$class
-  # bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-  # print(bench.glmnet_classifier.accuracy)
-  # 
-  # res <- bench.test %>%
-  #   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-  #   group_by(category) %>%
-  #   summarise(n = n(),
-  #             pct = 100*n/dim(bench.test)[[1]],
-  #             accurate = sum(accurate),
-  #             accuracy = (100*accurate/n)) %>%
-  #   arrange(-accuracy)
-  # 
-  # print(res)
-  
-  # --------------- svm pour 4646 articles tr?s long !! ... KO memoire
-  
-  # bench.ksvmclass_classifier.time <- system.time(
-  #   bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train), y = as.vector(bench.train[['category']]))
-  # ); print(sprintf('bench.ksvmclass_classifier.time: %0.2fs', bench.ksvmclass_classifier.time[[3]]))
-  # 
-  # bench.preds.class.time <- system.time(
-  #   bench.test$bench.preds.class <-  predict(bench.ksvmclass_classifier, as.matrix(bench.dtm_test))
-  # ); print(sprintf('bench.preds.class.time: %0.2fs', bench.preds.class.time[[3]]))
-  # 
-  # bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-  # print(bench.glmnet_classifier.accuracy)
-  # 
-  # res <- bench.test %>%
-  #   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-  #   group_by(category) %>%
-  #   summarise(n = n(),
-  #             pct = 100*n/dim(bench.test)[[1]],
-  #             accurate = sum(accurate),
-  #             accuracy = (100*accurate/n)) %>%
-  #   arrange(-accuracy)
-  # 
-  # print(res)
-  # 
-  # gc()
-  
   model_name <- paste0(as.character(i), as.character(length(bench.model) + 1))
   model_num <- as.numeric(model_name)
-    
+  
   param.bench.glmnet.THRESH <- init.param.bench.glmnet.THRESH
   param.bench.glmnet.MAXIT <- init.param.bench.glmnet.MAXIT
   param.bench.glmnet.NFOLDS <- init.param.bench.glmnet.NFOLDS
-  mode_desc <- sprintf('model %d - text2vect + ngram + prune + tfidf + cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
+  print("\n\n")
+  mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
                        model_num,
                        param.bench.glmnet.NFOLDS,
                        param.bench.glmnet.THRESH,
-                       param.bench.glmnet.MAXIT)
+                       param.bench.glmnet.MAXIT,
+                       param.dofeaturehashing,
+                       param.dongram,
+                       param.doprune,
+                       param.prune.term_count_min,
+                       param.prune.doc_proportion_max,
+                       param.prune.doc_proportion_min
+                       )
   print(mode_desc)
   tfidf = TfIdf$new()
   bench.dtm_train.tfidf = fit_transform(bench.dtm_train, tfidf)
@@ -313,7 +284,7 @@ for(i in param.startmodel:param.maxmodel)
                                          maxit = param.bench.glmnet.MAXIT,
                                          parallel = TRUE)
     
-  ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fs', bench.glmnet_classifier.time[[3]]))
+  ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fm', bench.glmnet_classifier.time[[3]]/60))
   
   plot(bench.glmnet_classifier)
   
