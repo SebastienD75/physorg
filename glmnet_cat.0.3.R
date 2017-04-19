@@ -66,9 +66,9 @@
   init.param.bench.glmnet.THRESH = 1e-2 # (default 1E-7)
   init.param.bench.glmnet.MAXIT =  1e2 # (default 10^5)
   
-  init.param.prune.term_count_min = 20
-  init.param.prune.doc_proportion_max = 0.6
-  init.param.prune.doc_proportion_min = 0.0005
+  init.param.prune.term_count_min = 50
+  init.param.prune.doc_proportion_max = 0.5
+  init.param.prune.doc_proportion_min = 0.0001
   
   param.pctdata.init <- 0
   param.train_test <- 0.7
@@ -119,9 +119,9 @@
     bench.model[[model_name]]$bench.glmnet_classifier.accuracy <<- bench.glmnet_classifier.accuracy
     bench.model[[model_name]]$bench.glmnet_classifier.accuracy_cat <<- res
     
-    print(sprintf("Model %s saved (%s min): pct data=%s, dim_train=(%d, %d), %s", 
+    print(sprintf("Model %s saved (%0.1f min): pct data=%s, dim_train=(%d, %d), %s", 
                   model_name, 
-                  bench.glmnet_classifier.time,
+                  bench.glmnet_classifier.time[[3]]/60,
                   bench.model[[model_name]]$param.pctdata,
                   bench.model[[model_name]]$bench.dtm_train.dim[[1]],
                   bench.model[[model_name]]$bench.dtm_train.dim[[2]],
@@ -142,6 +142,12 @@
 
 # BENCH DATA SIZE -------------------------------------------------------------------
 
+param.bench.glmnet.THRESH <- init.param.bench.glmnet.THRESH
+param.bench.glmnet.MAXIT <- init.param.bench.glmnet.MAXIT
+param.bench.glmnet.NFOLDS <- init.param.bench.glmnet.NFOLDS
+param.prune.term_count_min = init.param.prune.term_count_min
+param.prune.doc_proportion_max = init.param.prune.doc_proportion_max
+param.prune.doc_proportion_min = init.param.prune.doc_proportion_min
 param.pctdata <- param.pctdata.init
 model_num <- init.model_num
 param.maxmodel = min(c(length(param.pctdata.inc), param.maxmodel))
@@ -219,10 +225,6 @@ for(i in param.startmodel:param.maxmodel)
     
     if(param.doprune) {
       
-      param.prune.term_count_min = init.param.prune.term_count_min
-      param.prune.doc_proportion_max = init.param.prune.doc_proportion_max
-      param.prune.doc_proportion_min = init.param.prune.doc_proportion_min
-      
       bench.train.vocab.stem.prune.time <- system.time(
         bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
                                                    term_count_min = param.prune.term_count_min,
@@ -248,9 +250,6 @@ for(i in param.startmodel:param.maxmodel)
   model_name <- paste0(as.character(i), as.character(length(bench.model) + 1))
   model_num <- as.numeric(model_name)
   
-  param.bench.glmnet.THRESH <- init.param.bench.glmnet.THRESH
-  param.bench.glmnet.MAXIT <- init.param.bench.glmnet.MAXIT
-  param.bench.glmnet.NFOLDS <- init.param.bench.glmnet.NFOLDS
   mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
                        model_num,
                        param.bench.glmnet.NFOLDS,
