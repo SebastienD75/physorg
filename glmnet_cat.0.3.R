@@ -51,18 +51,20 @@
   }
   
   # param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
-  param.pctdata.inc <- c(0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6)
+  param.pctdata.inc <- c(0.03, 0.09, 0.2, 0.3, 0.4)
   param.maxmodel = 15
   
   param.dofeaturehashing = FALSE
   param.doprune = TRUE
   param.dongram = FALSE
   
+  param.doparall.worker = 7
+  
   init.param.pctdata = 0.03
   
-  init.param.bench.glmnet.NFOLDS = 5
-  init.param.bench.glmnet.THRESH = 1e-4 # (default 1E-7)
-  init.param.bench.glmnet.MAXIT =  10e4 # (default 10^5)
+  init.param.bench.glmnet.NFOLDS = 3
+  init.param.bench.glmnet.THRESH = 1e-2 # (default 1E-7)
+  init.param.bench.glmnet.MAXIT =  1e2 # (default 10^5)
   
   init.param.prune.term_count_min = 20
   init.param.prune.doc_proportion_max = 0.6
@@ -74,7 +76,6 @@
   model_desc = ''
   #param.startmodel = ceiling(length(bench.model)/2 + 1)
   param.startmodel = 1
-  param.doparall.worker = 7
   param.seed = 20170416
   
   set.seed(param.seed)
@@ -118,8 +119,10 @@
     bench.model[[model_name]]$bench.glmnet_classifier.accuracy <<- bench.glmnet_classifier.accuracy
     bench.model[[model_name]]$bench.glmnet_classifier.accuracy_cat <<- res
     
-    print(sprintf("Model %s saved : dim_train : (%d, %d), %s", 
+    print(sprintf("Model %s saved (%s min): pct data=%s, dim_train=(%d, %d), %s", 
                   model_name, 
+                  bench.glmnet_classifier.time,
+                  bench.model[[model_name]]$param.pctdata,
                   bench.model[[model_name]]$bench.dtm_train.dim[[1]],
                   bench.model[[model_name]]$bench.dtm_train.dim[[2]],
                   bench.model[[model_name]]$bench.glmnet_classifier.accuracy))
@@ -147,7 +150,7 @@ for(i in param.startmodel:param.maxmodel)
 {
   param.pctdata <- param.pctdata.inc[[i]]
   
-  print(paste("Testing model with param.pctdata =", param.pctdata))
+  cat(paste('\n\n',"Testing model with param.pctdata =", param.pctdata), '\n')
   
   bench.num_sample = ceiling(param.pctdata * dim(d.art.c.bench)[[1]])
   bench.all_ids = d.art.c.bench$id
@@ -248,7 +251,6 @@ for(i in param.startmodel:param.maxmodel)
   param.bench.glmnet.THRESH <- init.param.bench.glmnet.THRESH
   param.bench.glmnet.MAXIT <- init.param.bench.glmnet.MAXIT
   param.bench.glmnet.NFOLDS <- init.param.bench.glmnet.NFOLDS
-  print("\n\n")
   mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
                        model_num,
                        param.bench.glmnet.NFOLDS,
@@ -261,7 +263,7 @@ for(i in param.startmodel:param.maxmodel)
                        param.prune.doc_proportion_max,
                        param.prune.doc_proportion_min
                        )
-  print(mode_desc)
+  cat(mode_desc,'\n')
   tfidf = TfIdf$new()
   bench.dtm_train.tfidf = fit_transform(bench.dtm_train, tfidf)
   # tfidf modified by fit_transform() call!
@@ -302,6 +304,7 @@ for(i in param.startmodel:param.maxmodel)
               pct = 100*n/dim(bench.test)[[1]],
               accurate = sum(accurate),
               accuracy = (100*accurate/n)) %>%
+    select(category, n, pct, accuracy) %>%
     arrange(-accuracy)
   
   print(res)

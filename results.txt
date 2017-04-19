@@ -1,3 +1,567 @@
+
+
+
+---------------- OK meme chose :  MAXIT:100  THRESH:0.01: PCSDE 19/04/2017 : 0.2 79.24% nfold à 3 et MAXIT:100  THRESH:0.01: time : 1.6minute-------------------
+
+---------------- PCSDE 19/04/2017 : 0.2 79.24% nfold à 3 et MAXIT:1000, THRESH:0.01: time : 1.6minute-------------------
+
+> source('D:/Documents/Dev/R - Phys.org/glmnet_cat.0.3.R')
+
+
+ Testing model with param.pctdata = 0.03[1] "Train nb articles = 4646"
+[1] "bench.train_tokens.time: 2.42s"
+[1] "bench.train.vocab.stem.time: 0.48s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 1.00s"
+[1] "bench.dtm_test: 0.47s"
+model 11 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:1000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 0.19m"
+[1] "bench.preds.class: 0.17s"
+[1] "Accuracy : 72.66 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1        Technology   502 25.226131 85.85657
+2 Astronomy & Space   183  9.195980 85.24590
+3            Health   318 15.979899 84.27673
+4             Earth   225 11.306533 75.55556
+5           Biology   319 16.030151 67.71160
+6           Physics    93  4.673367 63.44086
+7    Other Sciences   210 10.552764 56.19048
+8         Chemistry    79  3.969849 26.58228
+9    Nanotechnology    61  3.065327 11.47541
+[1] "Model 11 saved : pct data=0.03, dim_train=(4646, 5972), Accuracy : 72.66 %"
+
+
+ Testing model with param.pctdata = 0.09[1] "Train nb articles = 13936"
+[1] "bench.train_tokens.time: 7.30s"
+[1] "bench.train.vocab.stem.time: 1.44s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 2.90s"
+[1] "bench.dtm_test: 1.00s"
+model 22 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:1000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 0.54m"
+[1] "bench.preds.class: 0.28s"
+[1] "Accuracy : 75.77 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space   548  9.176155 91.42336
+2        Technology  1479 24.765573 87.69439
+3            Health   913 15.288011 85.43264
+4             Earth   742 12.424648 80.18868
+5           Biology   942 15.773610 69.32059
+6    Other Sciences   614 10.281313 63.68078
+7           Physics   294  4.922974 60.54422
+8         Chemistry   264  4.420630 34.84848
+9    Nanotechnology   176  2.947086 21.59091
+[1] "Model 22 saved : pct data=0.09, dim_train=(13936, 10409), Accuracy : 75.77 %"
+
+
+ Testing model with param.pctdata = 0.2[1] "Train nb articles = 30968"
+[1] "bench.train_tokens.time: 16.43s"
+[1] "bench.train.vocab.stem.time: 3.37s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 6.63s"
+[1] "bench.dtm_test: 2.00s"
+model 33 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:1000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 1.59m"
+[1] "bench.preds.class: 0.37s"
+[1] "Accuracy : 79.25 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  1200  9.041591 93.66667
+2        Technology  3230 24.336950 90.74303
+3            Health  2017 15.197408 88.15072
+4             Earth  1706 12.854129 83.64596
+5           Biology  2118 15.958409 79.08404
+6           Physics   660  4.972875 66.96970
+7    Other Sciences  1303  9.817661 60.78281
+8         Chemistry   553  4.166667 34.71971
+9    Nanotechnology   485  3.654310 32.37113
+[1] "Model 33 saved : pct data=0.2, dim_train=(30968, 13538), Accuracy : 79.25 %"
+
+
+ Testing model with param.pctdata = 0.3[1] "Train nb articles = 46452"
+[1] "bench.train_tokens.time: 24.92s"
+[1] "bench.train.vocab.stem.time: 4.87s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 9.18s"
+[1] "bench.dtm_test: 2.81s"
+model 44 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:1000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 3.07m"
+[1] "bench.preds.class: 0.56s"
+[1] "Accuracy : 79.34 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  1760  8.840667 93.35227
+2        Technology  4847 24.346996 90.07634
+3            Health  3177 15.958409 88.03903
+4             Earth  2557 12.844083 84.08291
+5           Biology  3128 15.712276 73.08184
+6           Physics  1004  5.043199 71.61355
+7    Other Sciences  1970  9.895519 66.85279
+8         Chemistry   858  4.309825 37.87879
+9    Nanotechnology   607  3.049026 31.79572
+[1] "Model 44 saved : pct data=0.3, dim_train=(46452, 13798), Accuracy : 79.34 %"
+
+
+---------------- PCSDE 19/04/2017 : 0.2 79.24% nfold à 3 et maxit à 10000 et THRESH:0.001: time : 1.6minute-------------------
+
+> source('D:/Documents/Dev/R - Phys.org/glmnet_cat.0.3.R')
+
+
+ Testing model with param.pctdata = 0.03[1] "Train nb articles = 4646"
+[1] "bench.train_tokens.time: 2.39s"
+[1] "bench.train.vocab.stem.time: 0.48s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 1.03s"
+[1] "bench.dtm_test: 0.49s"
+model 11 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.001, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 0.19m"
+[1] "bench.preds.class: 0.16s"
+[1] "Accuracy : 72.66 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1        Technology   502 25.226131 85.85657
+2 Astronomy & Space   183  9.195980 85.24590
+3            Health   318 15.979899 84.27673
+4             Earth   225 11.306533 75.55556
+5           Biology   319 16.030151 67.71160
+6           Physics    93  4.673367 63.44086
+7    Other Sciences   210 10.552764 56.19048
+8         Chemistry    79  3.969849 26.58228
+9    Nanotechnology    61  3.065327 11.47541
+[1] "Model 11 saved : pct data=0.03, dim_train=(4646, 5972), Accuracy : 72.66 %"
+
+
+ Testing model with param.pctdata = 0.09[1] "Train nb articles = 13936"
+[1] "bench.train_tokens.time: 7.17s"
+[1] "bench.train.vocab.stem.time: 1.50s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 2.92s"
+[1] "bench.dtm_test: 0.98s"
+model 22 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.001, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 0.53m"
+[1] "bench.preds.class: 0.18s"
+[1] "Accuracy : 75.77 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space   548  9.176155 91.42336
+2        Technology  1479 24.765573 87.69439
+3            Health   913 15.288011 85.43264
+4             Earth   742 12.424648 80.18868
+5           Biology   942 15.773610 69.32059
+6    Other Sciences   614 10.281313 63.68078
+7           Physics   294  4.922974 60.54422
+8         Chemistry   264  4.420630 34.84848
+9    Nanotechnology   176  2.947086 21.59091
+[1] "Model 22 saved : pct data=0.09, dim_train=(13936, 10409), Accuracy : 75.77 %"
+
+
+ Testing model with param.pctdata = 0.2[1] "Train nb articles = 30968"
+[1] "bench.train_tokens.time: 16.26s"
+[1] "bench.train.vocab.stem.time: 3.25s"
+[1] "bench.train.vocab.stem.prune.time: 0.01s"
+[1] "bench.dtm_train.time: 6.38s"
+[1] "bench.dtm_test: 2.08s"
+model 33 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.001, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 1.74m"
+[1] "bench.preds.class: 0.39s"
+[1] "Accuracy : 79.25 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  1200  9.041591 93.66667
+2        Technology  3230 24.336950 90.74303
+3            Health  2017 15.197408 88.15072
+4             Earth  1706 12.854129 83.64596
+5           Biology  2118 15.958409 79.08404
+6           Physics   660  4.972875 66.96970
+7    Other Sciences  1303  9.817661 60.78281
+8         Chemistry   553  4.166667 34.71971
+9    Nanotechnology   485  3.654310 32.37113
+[1] "Model 33 saved : pct data=0.2, dim_train=(30968, 13538), Accuracy : 79.25 %"
+
+
+ Testing model with param.pctdata = 0.3[1] "Train nb articles = 46452"
+[1] "bench.train_tokens.time: 24.20s"
+[1] "bench.train.vocab.stem.time: 5.04s"
+[1] "bench.train.vocab.stem.prune.time: 0.02s"
+[1] "bench.dtm_train.time: 9.21s"
+[1] "bench.dtm_test: 2.83s"
+model 44 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.001, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 3.01m"
+[1] "bench.preds.class: 0.50s"
+[1] "Accuracy : 79.34 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  1760  8.840667 93.35227
+2        Technology  4847 24.346996 90.07634
+3            Health  3177 15.958409 88.03903
+4             Earth  2557 12.844083 84.08291
+5           Biology  3128 15.712276 73.08184
+6           Physics  1004  5.043199 71.61355
+7    Other Sciences  1970  9.895519 66.85279
+8         Chemistry   858  4.309825 37.87879
+9    Nanotechnology   607  3.049026 31.79572
+[1] "Model 44 saved : pct data=0.3, dim_train=(46452, 13798), Accuracy : 79.34 %"
+
+
+ Testing model with param.pctdata = 0.4[1] "Train nb articles = 61936"
+[1] "bench.train_tokens.time: 32.48s"
+[1] "bench.train.vocab.stem.time: 6.58s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 13.19s"
+[1] "bench.dtm_test: 3.88s"
+model 55 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.001, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+
+Warning messages:
+1: In cv.multnet(list(list(a0 = c(0.0261846849065743, 0.551488327853215,  :
+  Only 'deviance', 'class',  'mse' or 'mae'  available for multinomial models; 'deviance' used
+2: In cv.multnet(list(list(a0 = c(-0.0206635799932973, 0.549932975426781,  :
+  Only 'deviance', 'class',  'mse' or 'mae'  available for multinomial models; 'deviance' used
+3: In cv.multnet(list(list(a0 = c(-0.0303475653542579, 0.502456965130536,  :
+  Only 'deviance', 'class',  'mse' or 'mae'  available for multinomial models; 'deviance' used
+4: In cv.multnet(list(list(a0 = c(-0.0403353042782226, 0.550834640796527,  :
+  Only 'deviance', 'class',  'mse' or 'mae'  available for multinomial models; 'deviance' used
+Timing stopped at: 74.62 2.08 141.6 
+> source('D:/Documents/Dev/R - Phys.org/glmnet_cat.0.3.R')
+
+
+ Testing model with param.pctdata = 0.03[1] "Train nb articles = 4646"
+[1] "bench.train_tokens.time: 2.47s"
+[1] "bench.train.vocab.stem.time: 0.53s"
+[1] "bench.train.vocab.stem.prune.time: 0.01s"
+[1] "bench.dtm_train.time: 0.99s"
+[1] "bench.dtm_test: 0.47s"
+model 11 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 0.19m"
+[1] "bench.preds.class: 0.15s"
+[1] "Accuracy : 72.66 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1        Technology   502 25.226131 85.85657
+2 Astronomy & Space   183  9.195980 85.24590
+3            Health   318 15.979899 84.27673
+4             Earth   225 11.306533 75.55556
+5           Biology   319 16.030151 67.71160
+6           Physics    93  4.673367 63.44086
+7    Other Sciences   210 10.552764 56.19048
+8         Chemistry    79  3.969849 26.58228
+9    Nanotechnology    61  3.065327 11.47541
+[1] "Model 11 saved : pct data=0.03, dim_train=(4646, 5972), Accuracy : 72.66 %"
+
+
+ Testing model with param.pctdata = 0.09[1] "Train nb articles = 13936"
+[1] "bench.train_tokens.time: 7.15s"
+[1] "bench.train.vocab.stem.time: 1.45s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 2.82s"
+[1] "bench.dtm_test: 0.96s"
+model 22 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 0.53m"
+[1] "bench.preds.class: 0.28s"
+[1] "Accuracy : 75.77 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space   548  9.176155 91.42336
+2        Technology  1479 24.765573 87.69439
+3            Health   913 15.288011 85.43264
+4             Earth   742 12.424648 80.18868
+5           Biology   942 15.773610 69.32059
+6    Other Sciences   614 10.281313 63.68078
+7           Physics   294  4.922974 60.54422
+8         Chemistry   264  4.420630 34.84848
+9    Nanotechnology   176  2.947086 21.59091
+[1] "Model 22 saved : pct data=0.09, dim_train=(13936, 10409), Accuracy : 75.77 %"
+
+
+ Testing model with param.pctdata = 0.2[1] "Train nb articles = 30968"
+[1] "bench.train_tokens.time: 15.97s"
+[1] "bench.train.vocab.stem.time: 3.28s"
+[1] "bench.train.vocab.stem.prune.time: 0.01s"
+[1] "bench.dtm_train.time: 6.29s"
+[1] "bench.dtm_test: 1.98s"
+model 33 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 1.58m"
+[1] "bench.preds.class: 0.39s"
+[1] "Accuracy : 79.25 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  1200  9.041591 93.66667
+2        Technology  3230 24.336950 90.74303
+3            Health  2017 15.197408 88.15072
+4             Earth  1706 12.854129 83.64596
+5           Biology  2118 15.958409 79.08404
+6           Physics   660  4.972875 66.96970
+7    Other Sciences  1303  9.817661 60.78281
+8         Chemistry   553  4.166667 34.71971
+9    Nanotechnology   485  3.654310 32.37113
+[1] "Model 33 saved : pct data=0.2, dim_train=(30968, 13538), Accuracy : 79.25 %"
+
+
+ Testing model with param.pctdata = 0.3[1] "Train nb articles = 46452"
+[1] "bench.train_tokens.time: 24.22s"
+[1] "bench.train.vocab.stem.time: 4.90s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 9.15s"
+[1] "bench.dtm_test: 2.78s"
+model 44 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 2.43m"
+[1] "bench.preds.class: 0.52s"
+[1] "Accuracy : 79.34 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  1760  8.840667 93.35227
+2        Technology  4847 24.346996 90.07634
+3            Health  3177 15.958409 88.03903
+4             Earth  2557 12.844083 84.08291
+5           Biology  3128 15.712276 73.08184
+6           Physics  1004  5.043199 71.61355
+7    Other Sciences  1970  9.895519 66.85279
+8         Chemistry   858  4.309825 37.87879
+9    Nanotechnology   607  3.049026 31.79572
+[1] "Model 44 saved : pct data=0.3, dim_train=(46452, 13798), Accuracy : 79.34 %"
+
+
+ Testing model with param.pctdata = 0.4[1] "Train nb articles = 61936"
+[1] "bench.train_tokens.time: 32.54s"
+[1] "bench.train.vocab.stem.time: 6.45s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 13.00s"
+[1] "bench.dtm_test: 3.86s"
+model 55 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04 
+[1] "bench.glmnet_classifier.tfidf.time: 3.39m"
+[1] "bench.preds.class: 0.61s"
+[1] "Accuracy : 79.47 %"
+# A tibble: 9 × 4
+           category     n       pct accuracy
+             <fctr> <int>     <dbl>    <dbl>
+1 Astronomy & Space  2424  9.132007 93.93564
+2        Technology  6463 24.348252 90.46882
+3            Health  4089 15.404611 88.06554
+4             Earth  3475 13.091471 84.60432
+5           Biology  4140 15.596745 74.37198
+6    Other Sciences  2573  9.693339 68.09172
+7           Physics  1369  5.157474 67.64061
+8         Chemistry  1177  4.434147 37.38318
+9    Nanotechnology   834  3.141953 27.93765
+[1] "Model 55 saved : pct data=0.4, dim_train=(61936, 13991), Accuracy : 79.47 %"
+
+
+
+---------------- PCSDE 19/04/2017 : 0.2 79.24% nfold à 3 et THRESH:1e-04, MAXIT:10000: time : 1.6minute-------------------
+
+
+> source('D:/Documents/Dev/R - Phys.org/glmnet_cat.0.3.R')
+
+
+ Testing model with param.pctdata = 0.03[1] "Train nb articles = 4646"
+[1] "bench.train_tokens.time: 2.38s"
+[1] "bench.train.vocab.stem.time: 0.49s"
+[1] "bench.train.vocab.stem.prune.time: 0.01s"
+[1] "bench.dtm_train.time: 0.97s"
+[1] "bench.dtm_test: 0.45s"
+model 11 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 0.19m"
+[1] "bench.preds.class: 0.16s"
+[1] "Accuracy : 72.66 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1        Technology   502 25.226131      431 85.85657
+2 Astronomy & Space   183  9.195980      156 85.24590
+3            Health   318 15.979899      268 84.27673
+4             Earth   225 11.306533      170 75.55556
+5           Biology   319 16.030151      216 67.71160
+6           Physics    93  4.673367       59 63.44086
+7    Other Sciences   210 10.552764      118 56.19048
+8         Chemistry    79  3.969849       21 26.58228
+9    Nanotechnology    61  3.065327        7 11.47541
+[1] "Model 11 saved : pct data=0.03, dim_train=(4646, 5972), Accuracy : 72.66 %"
+
+
+ Testing model with param.pctdata = 0.09[1] "Train nb articles = 13936"
+[1] "bench.train_tokens.time: 7.17s"
+[1] "bench.train.vocab.stem.time: 1.47s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 2.86s"
+[1] "bench.dtm_test: 0.94s"
+model 22 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 0.54m"
+[1] "bench.preds.class: 0.26s"
+[1] "Accuracy : 75.79 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1 Astronomy & Space   548  9.176155      500 91.24088
+2        Technology  1479 24.765573     1298 87.76200
+3            Health   913 15.288011      782 85.65170
+4             Earth   742 12.424648      597 80.45822
+5           Biology   942 15.773610      653 69.32059
+6    Other Sciences   614 10.281313      385 62.70358
+7           Physics   294  4.922974      179 60.88435
+8         Chemistry   264  4.420630       93 35.22727
+9    Nanotechnology   176  2.947086       39 22.15909
+[1] "Model 22 saved : pct data=0.09, dim_train=(13936, 10409), Accuracy : 75.79 %"
+
+
+ Testing model with param.pctdata = 0.2[1] "Train nb articles = 30968"
+[1] "bench.train_tokens.time: 16.05s"
+[1] "bench.train.vocab.stem.time: 3.36s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 6.41s"
+[1] "bench.dtm_test: 2.04s"
+model 33 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 1.60m"
+[1] "bench.preds.class: 0.39s"
+[1] "Accuracy : 79.24 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1 Astronomy & Space  1200  9.041591     1126 93.83333
+2        Technology  3230 24.336950     2931 90.74303
+3            Health  2017 15.197408     1778 88.15072
+4             Earth  1706 12.854129     1426 83.58734
+5           Biology  2118 15.958409     1675 79.08404
+6           Physics   660  4.972875      441 66.81818
+7    Other Sciences  1303  9.817661      789 60.55257
+8         Chemistry   553  4.166667      192 34.71971
+9    Nanotechnology   485  3.654310      159 32.78351
+[1] "Model 33 saved : pct data=0.2, dim_train=(30968, 13538), Accuracy : 79.24 %"
+
+
+ Testing model with param.pctdata = 0.3[1] "Train nb articles = 46452"
+[1] "bench.train_tokens.time: 24.20s"
+[1] "bench.train.vocab.stem.time: 4.91s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 9.17s"
+[1] "bench.dtm_test: 2.80s"
+model 44 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:10000 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 2.50m"
+[1] "bench.preds.class: 0.51s"
+[1] "Accuracy : 79.31 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1 Astronomy & Space  1760  8.840667     1644 93.40909
+2        Technology  4847 24.346996     4362 89.99381
+3            Health  3177 15.958409     2793 87.91313
+4             Earth  2557 12.844083     2150 84.08291
+5           Biology  3128 15.712276     2282 72.95396
+6           Physics  1004  5.043199      721 71.81275
+7    Other Sciences  1970  9.895519     1318 66.90355
+8         Chemistry   858  4.309825      325 37.87879
+9    Nanotechnology   607  3.049026      194 31.96046
+[1] "Model 44 saved : pct data=0.3, dim_train=(46452, 13798), Accuracy : 79.31 %"
+
+
+
+
+---------------- PCSDE 19/04/2017 : 0.2 79.24% nfold à 3-------------------
+
+> source('D:/Documents/Dev/R - Phys.org/glmnet_cat.0.3.R')
+[1] "Testing model with param.pctdata = 0.03"
+[1] "Train nb articles = 4646"
+[1] "bench.train_tokens.time: 2.87s"
+[1] "bench.train.vocab.stem.time: 0.50s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 0.96s"
+[1] "bench.dtm_test: 0.42s"
+model 11 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:1e+05 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 0.21m"
+[1] "bench.preds.class: 0.15s"
+[1] "Accuracy : 72.66 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1        Technology   502 25.226131      431 85.85657
+2 Astronomy & Space   183  9.195980      156 85.24590
+3            Health   318 15.979899      268 84.27673
+4             Earth   225 11.306533      170 75.55556
+5           Biology   319 16.030151      216 67.71160
+6           Physics    93  4.673367       59 63.44086
+7    Other Sciences   210 10.552764      118 56.19048
+8         Chemistry    79  3.969849       21 26.58228
+9    Nanotechnology    61  3.065327        7 11.47541
+[1] "Model 11 saved : dim_train : (4646, 5972), Accuracy : 72.66 %"
+[1] "Testing model with param.pctdata = 0.09"
+[1] "Train nb articles = 13936"
+[1] "bench.train_tokens.time: 7.19s"
+[1] "bench.train.vocab.stem.time: 1.44s"
+[1] "bench.train.vocab.stem.prune.time: 0.01s"
+[1] "bench.dtm_train.time: 2.80s"
+[1] "bench.dtm_test: 0.93s"
+model 22 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:1e+05 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 0.58m"
+[1] "bench.preds.class: 0.29s"
+[1] "Accuracy : 75.79 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1 Astronomy & Space   548  9.176155      500 91.24088
+2        Technology  1479 24.765573     1298 87.76200
+3            Health   913 15.288011      782 85.65170
+4             Earth   742 12.424648      597 80.45822
+5           Biology   942 15.773610      653 69.32059
+6    Other Sciences   614 10.281313      385 62.70358
+7           Physics   294  4.922974      179 60.88435
+8         Chemistry   264  4.420630       93 35.22727
+9    Nanotechnology   176  2.947086       39 22.15909
+[1] "Model 22 saved : dim_train : (13936, 10409), Accuracy : 75.79 %"
+[1] "Testing model with param.pctdata = 0.2"
+[1] "Train nb articles = 30968"
+[1] "bench.train_tokens.time: 16.09s"
+[1] "bench.train.vocab.stem.time: 3.39s"
+[1] "bench.train.vocab.stem.prune.time: 0.01s"
+[1] "bench.dtm_train.time: 6.45s"
+[1] "bench.dtm_test: 1.99s"
+model 33 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:1e+05 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 1.67m"
+[1] "bench.preds.class: 0.42s"
+[1] "Accuracy : 79.24 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1 Astronomy & Space  1200  9.041591     1126 93.83333
+2        Technology  3230 24.336950     2931 90.74303
+3            Health  2017 15.197408     1778 88.15072
+4             Earth  1706 12.854129     1426 83.58734
+5           Biology  2118 15.958409     1675 79.08404
+6           Physics   660  4.972875      441 66.81818
+7    Other Sciences  1303  9.817661      789 60.55257
+8         Chemistry   553  4.166667      192 34.71971
+9    Nanotechnology   485  3.654310      159 32.78351
+[1] "Model 33 saved : dim_train : (30968, 13538), Accuracy : 79.24 %"
+[1] "Testing model with param.pctdata = 0.3"
+[1] "Train nb articles = 46452"
+[1] "bench.train_tokens.time: 25.00s"
+[1] "bench.train.vocab.stem.time: 4.94s"
+[1] "bench.train.vocab.stem.prune.time: 0.00s"
+[1] "bench.dtm_train.time: 9.08s"
+[1] "bench.dtm_test: 2.81s"
+model 44 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:1e-04, MAXIT:1e+05 + featureh=FALSE, ngram=FALSE, prune=TRUE :  prune.params = countmin:20, doc.prop.max:0.6, doc.prop.min:5e-04[1] "bench.glmnet_classifier.tfidf.time: 2.45m"
+[1] "bench.preds.class: 0.51s"
+[1] "Accuracy : 79.31 %"
+# A tibble: 9 × 5
+           category     n       pct accurate accuracy
+             <fctr> <int>     <dbl>    <dbl>    <dbl>
+1 Astronomy & Space  1760  8.840667     1644 93.40909
+2        Technology  4847 24.346996     4362 89.99381
+3            Health  3177 15.958409     2793 87.91313
+4             Earth  2557 12.844083     2150 84.08291
+5           Biology  3128 15.712276     2282 72.95396
+6           Physics  1004  5.043199      721 71.81275
+7    Other Sciences  1970  9.895519     1318 66.90355
+8         Chemistry   858  4.309825      325 37.87879
+9    Nanotechnology   607  3.049026      194 31.96046
+[1] "Model 44 saved : dim_train : (46452, 13798), Accuracy : 79.31 %"
+
+
+
 ---------------- PCSDE 19/04/2017 : 0.2 79.02%-------------------
 
 
