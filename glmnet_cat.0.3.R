@@ -51,12 +51,13 @@
   }
   
   # param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
-  param.pctdata.inc <- c(0.03, 0.09, 0.2, 0.3, 0.4)
-  param.maxmodel = 15
+  param.pctdata.inc <- c(0.3, 0.03, 0.09, 0.2, 0.3, 0.4)
+  param.maxmodel = 1
   
   param.dofeaturehashing = FALSE
   param.doprune = TRUE
   param.dongram = FALSE
+  param.dostem = FALSE
   
   param.doparall.worker = 7
   
@@ -66,9 +67,9 @@
   init.param.bench.glmnet.THRESH = 1e-2 # (default 1E-7)
   init.param.bench.glmnet.MAXIT =  1e2 # (default 10^5)
   
-  init.param.prune.term_count_min = 50
-  init.param.prune.doc_proportion_max = 0.5
-  init.param.prune.doc_proportion_min = 0.0001
+  init.param.prune.term_count_min = 40
+  init.param.prune.doc_proportion_max = 0.4
+  init.param.prune.doc_proportion_min = 0.0008
   
   param.pctdata.init <- 0
   param.train_test <- 0.7
@@ -95,6 +96,8 @@
     bench.model[[model_name]]$param.bench.glmnet.THRESH <<- param.bench.glmnet.THRESH
     bench.model[[model_name]]$param.bench.glmnet.MAXIT <<- param.bench.glmnet.MAXIT
     
+    
+    bench.model[[model_name]]$param.dostem <<- param.dostem
     bench.model[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
     bench.model[[model_name]]$param.dongram <<- param.dongram
     bench.model[[model_name]]$param.doprune <<- param.doprune
@@ -180,9 +183,19 @@ for(i in param.startmodel:param.maxmodel)
     lapply(tokens, SnowballC::wordStem, language="en")
   }
   
-  bench.train_tokens.time <- system.time(
-    bench.train_tokens <- bench.train$content %>% tokenizer.stem
-  ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
+  if(param.dostem) {
+    
+    bench.train_tokens.time <- system.time(
+      bench.train_tokens <- bench.train$content %>% tokenizer.stem
+    ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
+    
+  } else {
+    
+    bench.train_tokens.time <- system.time(
+      bench.train_tokens <- bench.train$content %>% word_tokenizer
+    ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
+    
+  }
   
   bench.it_train <- itoken(bench.train_tokens, 
                            ids = bench.train$id,
@@ -250,12 +263,13 @@ for(i in param.startmodel:param.maxmodel)
   model_name <- paste0(as.character(i), as.character(length(bench.model) + 1))
   model_num <- as.numeric(model_name)
   
-  mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
+  mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, stem=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
                        model_num,
                        param.bench.glmnet.NFOLDS,
                        param.bench.glmnet.THRESH,
                        param.bench.glmnet.MAXIT,
                        param.dofeaturehashing,
+                       param.dostem,
                        param.dongram,
                        param.doprune,
                        param.prune.term_count_min,
