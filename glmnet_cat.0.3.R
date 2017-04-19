@@ -1,5 +1,5 @@
 
-setwd("~/Dev/R - Phys.org")
+#setwd("~/Dev/R - Phys.org")
 
 {
   library(dplyr)
@@ -14,6 +14,7 @@ setwd("~/Dev/R - Phys.org")
   library(SnowballC)
   library(e1071)
   library(kernlab)
+  library(doParallel)
 }
 
 
@@ -49,20 +50,20 @@ setwd("~/Dev/R - Phys.org")
   }
   
   # param.pctdata.inc <- c(0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
-  param.pctdata.inc <- c(0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
-  param.maxmodel = 3
+  param.pctdata.inc <- c(0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+  param.maxmodel = 15
   
   param.dofeaturehashing = FALSE
   param.doprune = TRUE
-  param.dongram = FALSE
+  param.dongram = TRUE
   param.pctdata.init <- 0
   param.train_test <- 0.7
   
   init.param.pctdata = 0.03
   
-  init.param.bench.glmnet.NFOLDS = 3
-  init.param.bench.glmnet.THRESH = 1e-3 # (default 1E-7)
-  init.param.bench.glmnet.MAXIT =  10e3 # (default 10^5)
+  init.param.bench.glmnet.NFOLDS = 5
+  init.param.bench.glmnet.THRESH = 1e-4 # (default 1E-7)
+  init.param.bench.glmnet.MAXIT =  10e4 # (default 10^5)
   
   init.prune.term_count_min = 20 
   init.prune.doc_proportion_max = 0.6 # 0.7
@@ -72,9 +73,11 @@ setwd("~/Dev/R - Phys.org")
   model_desc = ''
   #param.startmodel = ceiling(length(bench.model)/2 + 1)
   param.startmodel = 1
+  param.doparall.worker = 7
   param.seed = 20170416
   
   set.seed(param.seed)
+  registerDoParallel(param.doparall.worker)
   
 }
 
@@ -82,6 +85,9 @@ setwd("~/Dev/R - Phys.org")
 {
   save_model <- function(model_name) 
   {
+    bench.model[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
+    bench.model[[model_name]]$param.doprune <<- param.doprune
+    bench.model[[model_name]]$param.dongram <<- param.dongram
     bench.model[[model_name]]$param.pctdata <<- param.pctdata
     bench.model[[model_name]]$model_num <<- model_num
     bench.model[[model_name]]$mode_desc <<- mode_desc
@@ -279,7 +285,7 @@ for(i in param.startmodel:param.maxmodel)
   param.bench.glmnet.THRESH <- init.param.bench.glmnet.THRESH
   param.bench.glmnet.MAXIT <- init.param.bench.glmnet.MAXIT
   param.bench.glmnet.NFOLDS <- init.param.bench.glmnet.NFOLDS
-  mode_desc <- sprintf('model %d - text2vect + Feature hashing + tfidf + cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
+  mode_desc <- sprintf('model %d - text2vect + ngram + prune + tfidf + cv.glmnet  - params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT: %s', 
                        model_num,
                        param.bench.glmnet.NFOLDS,
                        param.bench.glmnet.THRESH,
@@ -304,7 +310,8 @@ for(i in param.startmodel:param.maxmodel)
                                          type.measure = "auc",
                                          nfolds = param.bench.glmnet.NFOLDS,
                                          thresh = param.bench.glmnet.THRESH,
-                                         maxit = param.bench.glmnet.MAXIT)
+                                         maxit = param.bench.glmnet.MAXIT,
+                                         parallel = TRUE)
     
   ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fs', bench.glmnet_classifier.time[[3]]))
   
