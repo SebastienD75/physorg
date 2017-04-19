@@ -299,10 +299,13 @@ for(i in param.startmodel:param.maxmodel)
   res <- bench.test %>%
     mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
     group_by(category) %>%
+    # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
     summarise(n = n(),
               pct = 100*n/dim(bench.test)[[1]],
+              # words = sum(words),
               accurate = sum(accurate),
               accuracy = (100*accurate/n)) %>%
+    # select(category, n, pct, words, accuracy) %>%
     select(category, n, pct, accuracy) %>%
     arrange(-accuracy)
   
