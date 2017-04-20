@@ -18,6 +18,51 @@
 }
 
 
+# PARAMS ------------------------------------------------------------------
+{
+  
+  param.mutate.subcat = TRUE
+  
+  param.doparall.worker = 7
+  param.train_test <- 0.7
+  param.seed = 20170416
+  
+  param.doprune = TRUE
+  param.dostem = FALSE
+  param.dofeaturehashing = FALSE
+  param.dongram = FALSE
+  
+  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+  param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+  param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
+                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
+                    'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
+                    'Materials Science')
+  
+  param.startmodel.pctdata = 1
+  param.pctdata.default = 1
+  param.maxmodel.pctdata = 1
+  param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+
+  param.startmodel.cv.nfold <- 1
+  param.cv.nfold.default = 3
+  param.maxmodel.cv.nfold <- 1
+  param.cv.nfold.inc <- c(param.cv.nfold.default,5:10)
+  param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
+  param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
+ 
+  param.startmodel.prune = 1
+  param.maxmodel.prune = 1
+  param.prune.term_count_min.default = 40 # 80 # 40 # (default pkg 1)
+  param.prune.doc_proportion_max.default = 0.4 # 0.8 # 0.4 # (default pkg 1)
+  param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
+  #param.prune.doc_proportion_min.default = # (default Inf)
+  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(140), length.out = 20)))),
+                          doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
+                          doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
+  )
+  
+}
 
 # LOAD DATA ---------------------------------------------------------------
 
@@ -61,60 +106,13 @@
   } else {
     load(param.clean_content.file)
   }
-
+  
   protected.obj <- c("protected.obj", "bench.models", "d.art.c.bench")
   rm(list = setdiff(ls(), protected.obj))
   param.cleaninloop = c('d.bench', 'd.art.c.bench')
   gc()
 }
 
-
-# PARAMS ------------------------------------------------------------------
-{
-  
-  param.mutate.subcat = TRUE
-  
-  param.doparall.worker = 7
-  param.train_test <- 0.7
-  param.seed = 20170416
-  
-  param.doprune = TRUE
-  param.dostem = FALSE
-  param.dofeaturehashing = FALSE
-  param.dongram = FALSE
-  
-  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.sc <- c('Astronomy & Space', 'Physics')
-  param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
-                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
-                    'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
-                    'Materials Science')
-  
-  param.startmodel.pctdata = 1
-  param.pctdata.default = 1
-  param.maxmodel.pctdata = 1
-  param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
-
-  param.startmodel.cv.nfold <- 1
-  param.cv.nfold.default = 3
-  param.maxmodel.cv.nfold <- 1
-  param.cv.nfold.inc <- c(param.cv.nfold.default,5:10)
-  param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
-  param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
- 
-  param.startmodel.prune = 1
-  param.maxmodel.prune = 1
-  
-  param.prune.term_count_min.default = 40 # 80 # 40 # (default pkg 1)
-  param.prune.doc_proportion_max.default = 0.4 # 0.8 # 0.4 # (default pkg 1)
-  param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
-  #param.prune.doc_proportion_min.default = # (default Inf)
-  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(140), length.out = 20)))),
-                          doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
-                          doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
-  )
-  
-}
 
 # FUNCTIONS  -------------------------------------------------------------------
 {
@@ -185,7 +183,7 @@
   }
   
   if(param.mutate.subcat) {   
-    param.cat <- param.sc
+    param.cat <- param.mutate.subcat.cat
   }
   
   d.art.c.bench <- d.art.c.bench %>%
