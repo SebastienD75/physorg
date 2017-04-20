@@ -15,60 +15,14 @@
   library(e1071)
   library(kernlab)
   library(doParallel)
-}
-
-
-# PARAMS ------------------------------------------------------------------
-{
-  
-  param.mutate.subcat = TRUE
-  
-  param.doparall.worker = 7
-  param.train_test <- 0.7
-  param.seed = 20170416
-  
-  param.doprune = TRUE
-  param.dostem = FALSE
-  param.dofeaturehashing = FALSE
-  param.dongram = FALSE
-  
-  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
-                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
-                    'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
-                    'Materials Science')
-  
-  param.startmodel.pctdata = 1
-  param.pctdata.default = 1
-  param.maxmodel.pctdata = 1
-  param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
-
-  param.startmodel.cv.nfold <- 1
-  param.cv.nfold.default = 3
-  param.maxmodel.cv.nfold <- 1
-  param.cv.nfold.inc <- c(param.cv.nfold.default,5:10)
-  param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
-  param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
- 
-  param.startmodel.prune = 1
-  param.maxmodel.prune = 1
-  param.prune.term_count_min.default = 40 # 80 # 40 # (default pkg 1)
-  param.prune.doc_proportion_max.default = 0.4 # 0.8 # 0.4 # (default pkg 1)
-  param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
-  #param.prune.doc_proportion_min.default = # (default Inf)
-  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(140), length.out = 20)))),
-                          doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
-                          doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
-  )
-  
+  library(textstem)
 }
 
 # LOAD DATA ---------------------------------------------------------------
 
 {
   param.dataorg.file <- 'data/physorg.RData'
-  param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.RData'
+  param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.stemmatized.RData'
   
   if(!file.exists(param.clean_content.file)) {
     load(param.dataorg.file)
@@ -99,6 +53,10 @@
         setDT() %>%
         setkey(id)
     )
+    
+    d.art.c.bench$content <- d.art.c.bench$content %>%
+        lemmatize_strings()
+      
     # d.art.sc.clean$id <- as.character(d.art.sc.clean$id)
     # setkey(d.art.sc.clean, id)
     d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
@@ -111,6 +69,54 @@
   rm(list = setdiff(ls(), protected.obj))
   param.cleaninloop = c('d.bench', 'd.art.c.bench')
   gc()
+}
+
+
+# PARAMS ------------------------------------------------------------------
+{
+  
+  param.mutate.subcat = TRUE
+  
+  param.doparall.worker = 7
+  param.train_test <- 0.7
+  param.seed = 20170416
+  
+  param.doprune = TRUE
+  param.dostem = FALSE
+  param.dongram = TRUE
+  param.dofeaturehashing = FALSE # incompatible avec prune
+  
+  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+  param.mutate.subcat.cat <- c('Health')
+  param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
+                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
+                    'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
+                    'Materials Science')
+  
+  param.startmodel.pctdata = 1
+  param.pctdata.default = 1
+  param.maxmodel.pctdata = 1
+  param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+
+  param.startmodel.cv.nfold <- 1
+  param.cv.nfold.default = 3
+  param.maxmodel.cv.nfold <- 1
+  param.cv.nfold.inc <- c(param.cv.nfold.default,4:10)
+  param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
+  param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
+ 
+  param.startmodel.prune = 2
+  param.maxmodel.prune = 100
+  param.prune.term_count_min.default = 80 # 80 # 40 # (default pkg 1)
+  param.prune.doc_proportion_max.default = 0.8 # 0.8 # 0.4 # (default pkg 1)
+  param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
+  #param.prune.doc_proportion_min.default = # (default Inf)
+  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(140), length.out = 40)))),
+                          doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
+                          doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
+  )
+  
+  param.hngram = 2 ** 18
 }
 
 
@@ -280,6 +286,10 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
       word_tokenizer %>%
       itoken(ids = bench.test$id, progressbar = FALSE)
     
+    if(param.dofeaturehashing) {
+      param.doprune = FALSE
+    }
+    
     if(!param.doprune) {
       param.maxmodel.prune = 1
       param.startmodel.prune = 1
@@ -288,15 +298,12 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
       
       t0 = Sys.time()
       param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[1]]
-      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
-      cat(sprintf("[%d/%d]Testing model with prune = (count_min=%s, prop_max=%s, prop_min=%s)", 
-                  i_prune, param.maxmodel.prune, param.prune.term_count_min, param.prune.doc_proportion_max, param.prune.doc_proportion_min), '\n')
-      
-      
+      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[1]]#i_prune]]
+      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[1]]#i_prune]]
+
       if(param.dofeaturehashing) {
         
-        bench.h_vectorizer = hash_vectorizer(hash_size = 2 ** 18, ngram = c(1L, 2L))
+        bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
         bench.vectorizer <- bench.h_vectorizer
         
         bench.dtm_train.time <- system.time(
@@ -315,7 +322,7 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
           
           bench.train.vocab.stem.time <- system.time(
             bench.train.vocab.stem<- create_vocabulary(bench.it_train, ngram = c(1L, 2L))
-          ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+          ); print(sprintf('Do ngram : bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
           
         } else {
           
@@ -326,6 +333,9 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
         }
         
         if(param.doprune) {
+          
+          cat(sprintf("[%d/%d]Testing model with prune = (count_min=%s, prop_max=%s, prop_min=%s)", 
+                      i_prune, param.maxmodel.prune, param.prune.term_count_min, param.prune.doc_proportion_max, param.prune.doc_proportion_min), '\n')
           
           bench.train.vocab.stem.prune.time <- system.time(
             bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
