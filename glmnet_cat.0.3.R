@@ -206,6 +206,7 @@
   
   param.maxmodel.pctdata = min(c(length(param.pctdata.inc), param.startmodel.pctdata + param.maxmodel.pctdata - 1))
   param.maxmodel.cv.nfold =  min(c(length(param.cv.nfold.inc), param.startmodel.cv.nfold + param.maxmodel.cv.nfold - 1))
+  ## TODO enlever la valeur 1  trouver un meilleur moyen
   param.maxmodel.prune = min(c(length(param.prune.inc[[1]]), param.startmodel.prune + param.maxmodel.prune - 1))
   
   if(param.mutate.subcat) {
@@ -299,12 +300,13 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
       param.startmodel.prune = 1
     }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
     {
-      
-      t0 = Sys.time()
+      ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
+      ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
       param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[1]]#i_prune]]
-      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[1]]#i_prune]]
+      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
+      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
 
+      t0 = Sys.time()
       if(param.dofeaturehashing) {
         
         bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
@@ -362,7 +364,6 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
       }
       
       gc()
-      
       for(i_nfold in param.startmodel.cv.nfold:param.maxmodel.cv.nfold)
       {
         param.bench.glmnet.NFOLDS <<- param.cv.nfold.inc[[i_nfold]]
