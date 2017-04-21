@@ -578,6 +578,9 @@ for (i in 1:length(allcat))  {
 # tmp_coeffs <- coef(bench.glmnet_classifier, s = "lambda.min")
 # tmp_df <- data.frame(name = tmp_coeffs@Dimnames[[1]][tmp_coeffs@i], coefficient = tmp_coeffs@x)
 
+# TODO afficher les tf_idf comme http://tidytextmining.com/tfidf.html mais uniquement des terms retenus par la regression
+
+
 
 
 names(d.allresults)
