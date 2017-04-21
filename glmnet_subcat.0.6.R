@@ -565,6 +565,22 @@ for (i in 1:length(allcat))  {
 #                  colors=brewer.pal(11,"PiYG")))
 
 #
+# glmnet.coef <- coef(bench.glmnet_classifier, s='lambda.min')
+# glmnet.coef.cat <- glmnet.coef[['Genetics']]
+# glmnet.coef.cat.terms <- rownames(glmnet.coef.cat)[which(glmnet.coef.cat != 0)]
+# glmnet.coef.cat.terms.coef <- glmnet.coef.cat[which(glmnet.coef.cat != 0)]
+# glmnet.df <- data.frame(name = glmnet.coef.cat.terms, coefficient = glmnet.coef.cat.terms.coef)
+
+# http://stackoverflow.com/questions/27801130/extracting-coefficient-variable-names-from-glmnet-into-a-data-frame
+#coef(cv.glmnet.fit, s = "lambda.min")[which(coef(cv.glmnet.fit, s = "lambda.min") != 0)]
+#colnames(regression_data)[which(coef(cv.glmnet.fit, s = "lambda.min") != 0)]
+
+# tmp_coeffs <- coef(bench.glmnet_classifier, s = "lambda.min")
+# tmp_df <- data.frame(name = tmp_coeffs@Dimnames[[1]][tmp_coeffs@i], coefficient = tmp_coeffs@x)
+
+# TODO afficher les tf_idf comme http://tidytextmining.com/tfidf.html mais uniquement des terms retenus par la regression
+
+
 
 
 names(d.allresults)

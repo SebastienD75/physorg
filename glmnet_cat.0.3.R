@@ -74,18 +74,17 @@
 
 # PARAMS ------------------------------------------------------------------
 {
+  ## -- COMPUTEUR SPECIFICS --
+  param.doparall.worker = 3
   
-  param.mutate.subcat = TRUE
-  
-  param.doparall.worker = 7
-  param.train_test <- 0.7
-  param.seed = 20170416
-  
-  param.doprune = TRUE
+  ## -- PIPLINE --
+  param.doprune = FALSE
   param.dostem = FALSE
-  param.dongram = TRUE
+  param.dongram = FALSE
   param.dofeaturehashing = FALSE # incompatible avec prune
   
+  ## -- CAT / SUB CAT --
+  param.mutate.subcat = TRUE
   param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
   param.mutate.subcat.cat <- c('Health')
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
@@ -93,30 +92,35 @@
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                     'Materials Science')
   
-  param.startmodel.pctdata = 1
+  ## -- PCT USED DATA 
+  param.train_test <- 0.7
   param.pctdata.default = 1
+  param.startmodel.pctdata = 1
   param.maxmodel.pctdata = 1
   param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
 
-  param.startmodel.cv.nfold <- 1
+  ## -- NFOLD --
   param.cv.nfold.default = 3
+  param.startmodel.cv.nfold <- 1
   param.maxmodel.cv.nfold <- 1
   param.cv.nfold.inc <- c(param.cv.nfold.default,4:10)
   param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
   param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
  
-  param.startmodel.prune = 2
-  param.maxmodel.prune = 100
-  param.prune.term_count_min.default = 80 # 80 # 40 # (default pkg 1)
-  param.prune.doc_proportion_max.default = 0.8 # 0.8 # 0.4 # (default pkg 1)
-  param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
+  ## -- PRUNE --
+  param.prune.term_count_min.default = 50 # 80 # 40 # (default pkg 1)
+  param.prune.doc_proportion_max.default = 0.5 # 0.8 # 0.4 # (default pkg 1)
+  param.prune.doc_proportion_min.default = 0.0005 # 0.002 # 0.0008 # (default pkg 0)
   #param.prune.doc_proportion_min.default = # (default Inf)
-  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(140), length.out = 40)))),
+  param.startmodel.prune = 1
+  param.maxmodel.prune = 1
+  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = 30)))),
                           doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
                           doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
   )
   
   param.hngram = 2 ** 18
+  param.seed = 20170416
 }
 
 
@@ -202,6 +206,7 @@
   
   param.maxmodel.pctdata = min(c(length(param.pctdata.inc), param.startmodel.pctdata + param.maxmodel.pctdata - 1))
   param.maxmodel.cv.nfold =  min(c(length(param.cv.nfold.inc), param.startmodel.cv.nfold + param.maxmodel.cv.nfold - 1))
+  ## TODO enlever la valeur 1  trouver un meilleur moyen
   param.maxmodel.prune = min(c(length(param.prune.inc[[1]]), param.startmodel.prune + param.maxmodel.prune - 1))
   
   if(param.mutate.subcat) {
@@ -295,12 +300,13 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
       param.startmodel.prune = 1
     }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
     {
-      
-      t0 = Sys.time()
+      ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
+      ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
       param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[1]]#i_prune]]
-      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[1]]#i_prune]]
+      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
+      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
 
+      t0 = Sys.time()
       if(param.dofeaturehashing) {
         
         bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
@@ -358,7 +364,6 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
       }
       
       gc()
-      
       for(i_nfold in param.startmodel.cv.nfold:param.maxmodel.cv.nfold)
       {
         param.bench.glmnet.NFOLDS <<- param.cv.nfold.inc[[i_nfold]]
