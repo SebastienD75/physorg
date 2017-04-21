@@ -34,9 +34,9 @@
         mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
         # suppression des - qui ne sont pas dans des mots
         mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
-        # suppression de tout ce qui n'est pas lettre ou ' ou -
+        # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
         mutate(content = str_replace_all(content, "[^[A-Za-z]']", " ")) %>%
-        # suppression des mots de une ou deux lettres
+        # suppression des mots de une ou deux lettres remplaces par espace
         mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
         # transformation en minuscule
         mutate(content = str_to_lower(content)) %>%
