@@ -78,27 +78,28 @@
   param.doparall.worker = 3
   
   ## -- PIPLINE --
-  param.doprune = FALSE
+  param.doprune = TRUE
   param.dostem = FALSE
-  param.dongram = FALSE
+  param.dongram = TRUE
   param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
   param.mutate.subcat = TRUE
   param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.mutate.subcat.cat <- c('Health')
+  param.mutate.subcat.cat <- c('Physics')
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                     'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                     'Materials Science')
   
   ## -- PCT USED DATA 
-  param.train_test <- 0.7
   param.pctdata.default = 1
   param.startmodel.pctdata = 1
   param.maxmodel.pctdata = 1
   param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
-
+  param.train_test <- 0.7
+  
+  
   ## -- NFOLD --
   param.cv.nfold.default = 3
   param.startmodel.cv.nfold <- 1
@@ -107,10 +108,11 @@
   param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
   param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
  
+  
   ## -- PRUNE --
-  param.prune.term_count_min.default = 50 # 80 # 40 # (default pkg 1)
-  param.prune.doc_proportion_max.default = 0.5 # 0.8 # 0.4 # (default pkg 1)
-  param.prune.doc_proportion_min.default = 0.0005 # 0.002 # 0.0008 # (default pkg 0)
+  param.prune.term_count_min.default = 150 # 80 # 40 # (default pkg 1)
+  param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
+  param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
   #param.prune.doc_proportion_min.default = # (default Inf)
   param.startmodel.prune = 1
   param.maxmodel.prune = 1
@@ -444,3 +446,113 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
     }
   }
 }
+
+
+## --------------- Autres models possibles 
+
+# --------------- naiveBayes KO => prediction tr?s tr?s long... et "Accuracy : 9.60 %" pour 4646 articles ...
+
+# bench.naivebayes_classifier <- naiveBayes(x = as.matrix(bench.dtm_train),
+#                                           y = as.factor(bench.train[['category']]),
+#                                           method="class")
+# 
+# bench.test$bench.preds.class <-  predict(bench.naivebayes_classifier, as.matrix(bench.dtm_test))
+# #bench.test$bench.preds.class$class
+# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
+# print(bench.glmnet_classifier.accuracy)
+# 
+# res <- bench.test %>%
+#   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
+#   group_by(category) %>%
+#   summarise(n = n(),
+#             pct = 100*n/dim(bench.test)[[1]],
+#             accurate = sum(accurate),
+#             accuracy = (100*accurate/n)) %>%
+#   arrange(-accuracy)
+# 
+# print(res)
+
+# --------------- svm pour 4646 articles tr?s long !! ... KO memoire
+
+# bench.ksvmclass_classifier.time <- system.time(
+#   bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train), y = as.vector(bench.train[['category']]))
+# ); print(sprintf('bench.ksvmclass_classifier.time: %0.2fs', bench.ksvmclass_classifier.time[[3]]))
+# 
+# bench.preds.class.time <- system.time(
+#   bench.test$bench.preds.class <-  predict(bench.ksvmclass_classifier, as.matrix(bench.dtm_test))
+# ); print(sprintf('bench.preds.class.time: %0.2fs', bench.preds.class.time[[3]]))
+# 
+# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
+# print(bench.glmnet_classifier.accuracy)
+# 
+# res <- bench.test %>%
+#   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
+#   group_by(category) %>%
+#   summarise(n = n(),
+#             pct = 100*n/dim(bench.test)[[1]],
+#             accurate = sum(accurate),
+#             accuracy = (100*accurate/n)) %>%
+#   arrange(-accuracy)
+# 
+# print(res)
+# 
+# gc()
+
+
+# --------------- xgboost
+
+# require(xgboost)
+# library(pd)
+# bstDense <- xgboost(data = as.matrix(train$data), label = train$label, max_depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
+# 
+# dtrain <- xgb.DMatrix(data = train$data, label = train$label)
+# bstDMatrix <- xgboost(data = dtrain, max_depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
+# 
+# 
+# 
+# ## - https://cran.r-project.org/web/packages/xgboost/vignettes/xgboostPresentation.html
+# ## - https://gist.github.com/dkincaid/87f0fbeb912cf23816c340b4fbe30baa
+# ## - https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
+# 
+# train_matrix <- xgb.DMatrix(bench.dtm_train.tfidf, label = bench.train[['category']])
+# xgb_params = list(
+#   objective = "multi:softmax",
+#   num_class = length(levels(bench.train$category)) + 1,
+#   eta = 0.01,
+#   max.depth = 5,
+#   eval_metric = "mlogloss")
+# 
+# xgb_fit <- xgboost(data = train_matrix, params = xgb_params, nrounds = 20)
+# 
+# # Check the feature importance
+# importance_vars <- xgb.importance(model=xgb_fit, feature_names = colnames(train_matrix))
+# head(importance_vars, 20)
+# 
+# # Try to plot a partial dependency plot of one of the features
+# ## - KO partial(xgb_fit, train = bench.train, pred.var = "quantum")
+# 
+# ##- https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
+# xgbmodel.predict <- predict(xgb_fit, newdata = bench.dtm_test.tfidf, type = 'class')
+# xgbmodel.predict.text <- levels(bench.train$category)[xgbmodel.predict]
+# 
+# bench.test$xgbmodel.predict.text <- xgbmodel.predict.text
+# 
+# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != xgbmodel.predict.text]))/dim(bench.test)[[1]])
+# print(bench.glmnet_classifier.accuracy)
+# 
+# 
+# ## - https://www.kaggle.com/tqchen/otto-group-product-classification-challenge/understanding-xgboost-model-on-otto-data
+# 
+# cv.nround <- 20
+# cv.nfold <- 10
+# 
+# bst.cv = xgb.cv(param=xgb_params, data = train_matrix, nfold = cv.nfold, nrounds = cv.nround)
+# xgb_fit <- bst.cv
+# 
+# xgbmodel.predict <- predict(xgb_fit, newdata = bench.dtm_test.tfidf, type = 'class')
+# xgbmodel.predict.text <- levels(bench.train$category)[xgbmodel.predict]
+# 
+# bench.test$xgbmodel.predict.text <- xgbmodel.predict.text
+# 
+# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != xgbmodel.predict.text]))/dim(bench.test)[[1]])
+# print(bench.glmnet_classifier.accuracy)
