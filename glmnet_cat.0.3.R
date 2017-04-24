@@ -565,7 +565,7 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 # 
 
 
-# --------------- SVM e1071, KO memory
+# --------------- SVM e1071, KO memory et predict
 
 # 
 # # library(e1071)
@@ -638,11 +638,52 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 
 
 # --------------- caret nn KO : There were missing values in resampled performance measures
+## -- https://stats.stackexchange.com/questions/21717/how-to-train-and-validate-a-neural-network-model-in-r
 
 # library(caret)
-# # my.grid <- expand.grid(.decay = c(0.5, 0.1), .size = c(5, 6, 7))
-# caret.fit <- train(x = as.matrix(bench.dtm_train.tfidf), 
-#                    y = as.vector(bench.train[['category']]),
-#                    method = "nnet", size = 2, 
-#                    #tuneGrid = my.grid, trace = F, linout = 1,
-#                    maxit = 10)
+# library(tidyr)
+# KO pareil
+# caret.fit <- train(x = as.matrix(bench.dtm_train.tfidf),
+#                    y = bench.train[['category']],
+#                    method = "nnet", size = 5, MaxNWts = 25000,
+#                    maxit = 30)
+
+pcanet.model <- pcaNNet(x = as.matrix(bench.dtm_train.tfidf),
+                         y = bench.train[['category']],
+                         size = 5, MaxNWts = 10000, thresh = 0.95 )
+# weights:  13302
+# initial  value 16882.917811 
+# final  value 7808.000000 
+# converged
+
+pcanet.preds <- predict(pcanet.model, newdata = as.matrix(bench.dtm_test.tfidf))
+head(pcanet.preds)
+
+pcanet.preds.class <- as.data.table(pcanet.preds) %>%
+  gather(category, bval) %>%
+  filter(bval == 1) %>%
+  select(category)
+
+bench.test$pcanet.preds.class <- pcanet.preds.class
+  
+bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.class]))/dim(bench.test)[[1]])
+print(bench.pcanet.accuracy)
+
+
+dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), bench.train[['category']]))
+colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
+
+dt.bench.dtm_test.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_test.tfidf), bench.test[['category']]))
+colnames(dt.bench.dtm_test.tfidf)[dim(dt.bench.dtm_test.tfidf)[2]] <- 'category'
+
+pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 21000)
+
+pcanet.model.2.preds <- predict(pcanet.model.2, newdata = dt.bench.dtm_test.tfidf)
+
+pcanet.preds.2 <- factor(pcanet.model.2.preds, labels = unique(levels(bench.test$category)))
+bench.test$pcanet.preds.2 <- pcanet.preds.2
+
+bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.2]))/dim(bench.test)[[1]])
+
+print(bench.pcanet.accuracy) # "Accuracy : 74.77 %"
+
