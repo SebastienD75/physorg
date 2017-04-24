@@ -635,3 +635,14 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 # library(nnet)
 # # Error: cannot allocate vector of size 50.0 Gb
 # nnet_model <- nnet(category ~ ., data = dt.bench.dtm_train.tfidf, size = 2)
+
+
+# --------------- caret nn KO : There were missing values in resampled performance measures
+
+# library(caret)
+# # my.grid <- expand.grid(.decay = c(0.5, 0.1), .size = c(5, 6, 7))
+# caret.fit <- train(x = as.matrix(bench.dtm_train.tfidf), 
+#                    y = as.vector(bench.train[['category']]),
+#                    method = "nnet", size = 2, 
+#                    #tuneGrid = my.grid, trace = F, linout = 1,
+#                    maxit = 10)
