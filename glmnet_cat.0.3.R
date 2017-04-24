@@ -6,14 +6,11 @@
   library(tidytext)
   library(data.table)
   library(stringr)
-  library(tm)
   library(glmnet)
   library(wordcloud)
   require(RColorBrewer)
   library(text2vec)
   library(SnowballC)
-  library(e1071)
-  library(kernlab)
   library(doParallel)
   library(textstem)
 }
@@ -448,9 +445,11 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 }
 
 
-## --------------- Autres models possibles 
+## --------------- Autres models possibles --------------- 
 
-# --------------- naiveBayes KO => prediction tr?s tr?s long... et "Accuracy : 9.60 %" pour 4646 articles ...
+
+
+# --------------- naiveBayes OK ? => beaucoup moins bon et prediction KO ? (tres lonnnnng...)
 
 # bench.naivebayes_classifier <- naiveBayes(x = as.matrix(bench.dtm_train),
 #                                           y = as.factor(bench.train[['category']]),
@@ -472,43 +471,10 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 # 
 # print(res)
 
-# --------------- svm pour 4646 articles tr?s long !! ... KO memoire
 
-# bench.ksvmclass_classifier.time <- system.time(
-#   bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train), y = as.vector(bench.train[['category']]))
-# ); print(sprintf('bench.ksvmclass_classifier.time: %0.2fs', bench.ksvmclass_classifier.time[[3]]))
-# 
-# bench.preds.class.time <- system.time(
-#   bench.test$bench.preds.class <-  predict(bench.ksvmclass_classifier, as.matrix(bench.dtm_test))
-# ); print(sprintf('bench.preds.class.time: %0.2fs', bench.preds.class.time[[3]]))
-# 
-# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-# print(bench.glmnet_classifier.accuracy)
-# 
-# res <- bench.test %>%
-#   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-#   group_by(category) %>%
-#   summarise(n = n(),
-#             pct = 100*n/dim(bench.test)[[1]],
-#             accurate = sum(accurate),
-#             accuracy = (100*accurate/n)) %>%
-#   arrange(-accuracy)
-# 
-# print(res)
-# 
-# gc()
-
-
-# --------------- xgboost
+# --------------- xgboost : OK un peu moins bon resultat et beaucouuuuuup plus long
 
 # require(xgboost)
-# library(pd)
-# bstDense <- xgboost(data = as.matrix(train$data), label = train$label, max_depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
-# 
-# dtrain <- xgb.DMatrix(data = train$data, label = train$label)
-# bstDMatrix <- xgboost(data = dtrain, max_depth = 2, eta = 1, nthread = 2, nrounds = 2, objective = "binary:logistic")
-# 
-# 
 # 
 # ## - https://cran.r-project.org/web/packages/xgboost/vignettes/xgboostPresentation.html
 # ## - https://gist.github.com/dkincaid/87f0fbeb912cf23816c340b4fbe30baa
@@ -518,11 +484,11 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 # xgb_params = list(
 #   objective = "multi:softmax",
 #   num_class = length(levels(bench.train$category)) + 1,
-#   eta = 0.01,
-#   max.depth = 5,
+#   eta = 0.1,
+#   max.depth = 20,
 #   eval_metric = "mlogloss")
 # 
-# xgb_fit <- xgboost(data = train_matrix, params = xgb_params, nrounds = 20)
+# xgb_fit <- xgboost(data = train_matrix, params = xgb_params, nrounds = 100)
 # 
 # # Check the feature importance
 # importance_vars <- xgb.importance(model=xgb_fit, feature_names = colnames(train_matrix))
@@ -530,16 +496,22 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 # 
 # # Try to plot a partial dependency plot of one of the features
 # ## - KO partial(xgb_fit, train = bench.train, pred.var = "quantum")
-# 
-# ##- https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
+
+## - https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
+## - https://www.r-bloggers.com/an-introduction-to-xgboost-r-package/
+
 # xgbmodel.predict <- predict(xgb_fit, newdata = bench.dtm_test.tfidf, type = 'class')
-# xgbmodel.predict.text <- levels(bench.train$category)[xgbmodel.predict]
+# xgbmodel.predict.class <- levels(bench.train$category)[xgbmodel.predict]
 # 
-# bench.test$xgbmodel.predict.text <- xgbmodel.predict.text
+# bench.test$xgbmodel.predict.class <- xgbmodel.predict.class
 # 
-# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != xgbmodel.predict.text]))/dim(bench.test)[[1]])
-# print(bench.glmnet_classifier.accuracy)
+# bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != xgbmodel.predict.class]))/dim(bench.test)[[1]])
+# print(bench.xgboost_classifier.accuracy)
 # 
+# importance_matrix <- xgb.importance(bench.dtm_train.tfidf@Dimnames[[2]], model = xgb_fit)
+# xgb.plot.importance(head(importance_matrix,20))
+# 
+# xgb.plot.deepness(model = xgb_fit)
 # 
 # ## - https://www.kaggle.com/tqchen/otto-group-product-classification-challenge/understanding-xgboost-model-on-otto-data
 # 
@@ -547,12 +519,119 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 # cv.nfold <- 10
 # 
 # bst.cv = xgb.cv(param=xgb_params, data = train_matrix, nfold = cv.nfold, nrounds = cv.nround)
-# xgb_fit <- bst.cv
 # 
-# xgbmodel.predict <- predict(xgb_fit, newdata = bench.dtm_test.tfidf, type = 'class')
-# xgbmodel.predict.text <- levels(bench.train$category)[xgbmodel.predict]
+
+
+
+# --------------- SVM kernlab, OK moins bon resultats
+
+# library(kernlab)
+# t0 = Sys.time(); bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train.tfidf), 
+#                                                     y = as.vector(bench.train[['category']]),
+#                                                     C= 10, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
+#                                                     prob.model=TRUE
+# ); t1 = Sys.time()
 # 
-# bench.test$xgbmodel.predict.text <- xgbmodel.predict.text
+# print(difftime(t1, t0, units = 'mins'))
 # 
-# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != xgbmodel.predict.text]))/dim(bench.test)[[1]])
-# print(bench.glmnet_classifier.accuracy)
+# ksvm.predict <- predict(bench.ksvmclass_classifier, newdata = bench.dtm_test.tfidf, type = 'probabilities')
+# 
+# ksvm.predict.gather_prob <- as.data.table(ksvm.predict) %>% 
+#   mutate(id = row_number()) %>% 
+#   gather(category, prob, -id) %>%
+#   group_by(id) %>% 
+#   mutate(better_prob = max(prob)) %>% 
+#   filter(prob == better_prob) %>% 
+#   select(id, category, better_prob) %>% 
+#   arrange(id) %>% 
+#   setDT()
+# 
+# bench.test$ksvm.predict.class <- ksvm.predict.gather_prob$category
+# bench.test$ksvm.predict.prob <- ksvm.predict.gather_prob$better_prob
+# 
+# 
+# #tst[,(cols):=lapply(.SD, as.factor),.SDcols=cols]
+# # ksvm.predict.bool <- as.data.table(ksvm.predict)
+# # ksvm.predict.bool[, (names(ksvm.predict.bool)) := lapply(.SD, function(x) ifelse(x>=0.5,1,0))]
+# # bench.test$ksvm.predict.class <- ksvm.predict.bool %>% 
+# #   gather(category,boolval) %>% 
+# #   filter(boolval == 1) %>% 
+# #   select(category)
+# 
+# bench.ksvm_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != ksvm.predict.class]))/dim(bench.test)[[1]])
+# print(bench.ksvm_classifier.accuracy)
+# 
+# 
+# 
+
+
+# --------------- SVM e1071, KO memory
+
+# 
+# # library(e1071)
+# # dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), as.vector(bench.train[['category']])))
+# # colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
+# # bench.svm <- e1071::svm(category ~ ., dt.bench.dtm_train.tfidf) # Error: cannot allocate vector of size 50.0 Gb
+# # bench.svm <- e1071::svm(as.factor(bench.train[['category']]) ~ as.matrix(bench.dtm_train.tfidf))
+# # svm.predict <- predict(bench.svm, newdata = as.matrix(bench.dtm_test.tfidf))
+# # KO, predict pas bon à cause de la formule => http://stackoverflow.com/questions/4462118/predict-svm-does-not-predict-new-data
+# # bench.test$svm.predict.class <- svm.predict
+# # 
+# # dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), as.vector(bench.train[['category']])))
+# # colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
+# # # KO : Error: cannot allocate vector of size 50.0 Gb
+# # bench.svm <- e1071::svm(category ~ ., data = dt.bench.dtm_train.tfidf)
+# 
+
+# --------------- SVM liquidSVM, KO data
+
+## - http://www.isa.uni-stuttgart.de/software/R/demo.html
+
+# library(liquidSVM)
+
+# KO no data
+# model <- liquidSVM::mcSVM(x = as.matrix(bench.dtm_train.tfidf),
+#                y = as.vector(bench.train[['category']]),
+#                mc_type="AvA_hinge"
+#                # useCells=TRUE,threads=3
+# )
+
+# dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), as.vector(bench.train[['category']])))
+# colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
+
+# bench.svm <- liquidSVM::svm(category ~ ., dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
+# colnames(dt.bench.dtm_train.tfidf) <- paste0('`',colnames(dt.bench.dtm_train.tfidf),'`')
+# bench.svm <- liquidSVM::svm(category ~ ., dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
+# f <- paste("category ~", paste(sprintf("`%s`", colnames(dt.bench.dtm_train.tfidf)), collapse="+"))
+# bench.svm <- liquidSVM::svm(formula(f), dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
+
+# KO aussi
+# bench.svm <- svm(x = dt.bench.dtm_train.tfidf[-dim(dt.bench.dtm_train.tfidf)[2]], 
+#                  y =  dt.bench.dtm_train.tfidf[dim(dt.bench.dtm_train.tfidf)[2]])
+
+# KO aussi
+# model <- mcSVM(formula(f), dt.bench.dtm_train.tfidf,
+#                mc_type="AvA_hinge",
+#                useCells=TRUE, threads=3
+#                )
+
+
+
+# 
+# # To create a sparse matrix you can do this:
+# #   
+# #   library(Matrix)
+# # library(SpareM)
+# # sMatrix <- Matrix(data=as.matrix(trainData), sparse=TRUE)
+# # Then you can use that on your svm model
+# # 
+# # svm.model <- svm(trainData[,"Target"] ~., data=sMatrix, kernel="linear")
+# # To predict you should make sure your train data has the correct format and then you can use:
+# #   
+# #   predicted <- predict(svm.model, testData)
+
+# --------------- NNET KO Memory
+
+# library(nnet)
+# # Error: cannot allocate vector of size 50.0 Gb
+# nnet_model <- nnet(category ~ ., data = dt.bench.dtm_train.tfidf, size = 2)
