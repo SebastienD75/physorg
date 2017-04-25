@@ -12,7 +12,7 @@
   library(text2vec)
   library(SnowballC)
   library(doParallel)
-  library(textstem)
+  # library(textstem)
 }
 
 # LOAD DATA ---------------------------------------------------------------
@@ -74,16 +74,16 @@
   ## -- COMPUTEUR SPECIFICS --
   param.doparall.worker = 3
   
-  ## -- PIPLINE --
+  ## -- PIPELINE --
   param.doprune = TRUE
   param.dostem = FALSE
-  param.dongram = TRUE
+  param.dongram = FALSE
   param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
   param.mutate.subcat = TRUE
   param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.mutate.subcat.cat <- c('Physics')
+  param.mutate.subcat.cat <- c('Health')
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                     'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
@@ -120,6 +120,10 @@
   
   param.hngram = 2 ** 18
   param.seed = 20170416
+  param.bench.SVM = FALSE
+  param.bench.NNet = FALSE
+  param.bench.xgboost = FALSE
+  param.bench.bayses = FALSE
 }
 
 
@@ -641,6 +645,7 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 ## -- https://stats.stackexchange.com/questions/21717/how-to-train-and-validate-a-neural-network-model-in-r
 
 # library(caret)
+# library(nnet)
 # library(tidyr)
 # KO pareil
 # caret.fit <- train(x = as.matrix(bench.dtm_train.tfidf),
@@ -648,9 +653,11 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 #                    method = "nnet", size = 5, MaxNWts = 25000,
 #                    maxit = 30)
 
-pcanet.model <- pcaNNet(x = as.matrix(bench.dtm_train.tfidf),
-                         y = bench.train[['category']],
-                         size = 5, MaxNWts = 10000, thresh = 0.95 )
+# KO, prediction 0 ?
+# pcanet.model <- pcaNNet(x = as.matrix(bench.dtm_train.tfidf),
+#                          y = bench.train[['category']],
+#                          size = 5, MaxNWts = 10000, thresh = 0.95 )
+
 # weights:  13302
 # initial  value 16882.917811 
 # final  value 7808.000000 
@@ -676,7 +683,7 @@ colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'categor
 dt.bench.dtm_test.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_test.tfidf), bench.test[['category']]))
 colnames(dt.bench.dtm_test.tfidf)[dim(dt.bench.dtm_test.tfidf)[2]] <- 'category'
 
-pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 21000)
+pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 210000)
 
 pcanet.model.2.preds <- predict(pcanet.model.2, newdata = dt.bench.dtm_test.tfidf)
 
