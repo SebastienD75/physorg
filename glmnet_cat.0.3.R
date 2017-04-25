@@ -74,16 +74,16 @@
   ## -- COMPUTEUR SPECIFICS --
   param.doparall.worker = 3
   
-  ## -- PIPELINE --
+  ## -- PIPLINE --
   param.doprune = TRUE
   param.dostem = FALSE
-  param.dongram = FALSE
+  param.dongram = TRUE
   param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
   param.mutate.subcat = TRUE
   param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.mutate.subcat.cat <- c('Health')
+  param.mutate.subcat.cat <- c('Physics')
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                     'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
@@ -120,10 +120,6 @@
   
   param.hngram = 2 ** 18
   param.seed = 20170416
-  param.bench.SVM = FALSE
-  param.bench.NNet = FALSE
-  param.bench.xgboost = FALSE
-  param.bench.bayses = FALSE
 }
 
 
@@ -216,6 +212,7 @@
     d.art.c.bench.allcat <- d.art.c.bench
   }
 }
+
 
 
 # START BENCH -------------------------------------------------------------
@@ -448,82 +445,120 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
   }
 }
 
+# ----------------- REF param.mutate.subcat.cat <- c('Physics')
+#   Categories to learn : 
+#   <Condensed Matter> <General Physics> <Optics & Photonics> <Plasma Physics> <Quantum Physics> <Soft Matter> <Superconductivity>
+#   
+#   [1/1]Testing model with param.pctdata = 1 
+#   [1] "Train nb articles = 7808"
+#   [1] "bench.train_tokens.time: 3.62s"
+#   [1] "Do ngram : bench.train.vocab.stem.time: 4.57s"
+#   [1/1]Testing model with prune = (count_min=150, prop_max=0.9, prop_min=0) 
+#   [1] "bench.train.vocab.stem.prune.time: 0.27s"
+#   [1] "bench.dtm_train.time: 2.23s"
+#   [1] "bench.dtm_test: 0.97s"
+#   [1/1]Training model with param.cv.nfold = 3 
+#   model 111 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:100 + featureh=FALSE, stem=FALSE, ngram=TRUE, prune=TRUE :  prune.params = countmin:150, doc.prop.max:0.9, doc.prop.min:0 
+#   [1] "bench.glmnet_classifier.tfidf.time: 0.38m"
+#   [1] "bench.preds.class: 0.08s"
+#   [1] "Accuracy : 80.03 %"
+#   # A tibble: 7 × 4
+#   category     n       pct  accuracy
+#   <fctr> <int>     <dbl>     <dbl>
+#     1    General Physics  1857 55.515695 89.553043
+#   2  Superconductivity   108  3.228700 79.629630
+#   3    Quantum Physics   397 11.868460 77.078086
+#   4 Optics & Photonics   454 13.572496 71.145374
+#   5     Plasma Physics    84  2.511211 60.714286
+#   6   Condensed Matter   409 12.227205 60.146699
+#   7        Soft Matter    36  1.076233  5.555556
+#   [1] "Model 111 saved (0.4 min): pct data=1, dim_train=(7808, 2926), Accuracy : 80.03 %"
+#   Time difference of 0.5773865 mins
 
 ## --------------- Autres models possibles --------------- 
 
 
+# param.mutate.subcat.cat <- c('Physics')
+# --------------- naiveBayes "Accuracy : 55.25 %", Time difference of 2.209617 mins
 
-# --------------- naiveBayes OK ? => beaucoup moins bon et prediction KO ? (tres lonnnnng...)
-
-# bench.naivebayes_classifier <- naiveBayes(x = as.matrix(bench.dtm_train),
-#                                           y = as.factor(bench.train[['category']]),
-#                                           method="class")
-# 
-# bench.test$bench.preds.class <-  predict(bench.naivebayes_classifier, as.matrix(bench.dtm_test))
-# #bench.test$bench.preds.class$class
-# bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-# print(bench.glmnet_classifier.accuracy)
-# 
-# res <- bench.test %>%
-#   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-#   group_by(category) %>%
-#   summarise(n = n(),
-#             pct = 100*n/dim(bench.test)[[1]],
-#             accurate = sum(accurate),
-#             accuracy = (100*accurate/n)) %>%
-#   arrange(-accuracy)
-# 
-# print(res)
+if(param.bench.naivebayes)
+{
+  library(e1071)
+  t0 <- Sys.time()
+  
+  bench.naivebayes_classifier <- naiveBayes(x = as.matrix(bench.dtm_train.tfidf),
+                                            y = bench.train[['category']])
+  
+  bench.test$bench.naivebayes.preds.class <-  predict(bench.naivebayes_classifier, as.matrix(bench.dtm_test.tfidf))
+  head(bench.test$bench.naivebayes.preds.class)
+  bench.naivebayesclassifier.accuracy <- sprintf("Accuracy : %0.2f %%", 
+                                                 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.naivebayes.preds.class]))/dim(bench.test)[[1]])
+  
+  
+  tend <- Sys.time()
+  print(bench.naivebayesclassifier.accuracy)
+  print(difftime(tend, to, units = 'mins'))
+}
 
 
-# --------------- xgboost : OK un peu moins bon resultat et beaucouuuuuup plus long
+# param.mutate.subcat.cat <- c('Physics')
+# --------------- xgboost : 
+# 5/200   [1] "Accuracy : 80.03 %" Time difference of 2.574376 mins
+# 5/300   [1] "Accuracy : 80.45 %" Time difference of 3.659111 mins
+# 5/500   [1] "Accuracy : 80.75 %" Time difference of 5.820309 mins
+# 6.600   [1] "Accuracy : 80.69 %" Time difference of 7.327472 mins
+# 3/1000  [1] "Accuracy : 80.60 %" : Time difference of 7.901743 mins
 
-# require(xgboost)
-# 
-# ## - https://cran.r-project.org/web/packages/xgboost/vignettes/xgboostPresentation.html
-# ## - https://gist.github.com/dkincaid/87f0fbeb912cf23816c340b4fbe30baa
-# ## - https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
-# 
-# train_matrix <- xgb.DMatrix(bench.dtm_train.tfidf, label = bench.train[['category']])
-# xgb_params = list(
-#   objective = "multi:softmax",
-#   num_class = length(levels(bench.train$category)) + 1,
-#   eta = 0.1,
-#   max.depth = 20,
-#   eval_metric = "mlogloss")
-# 
-# xgb_fit <- xgboost(data = train_matrix, params = xgb_params, nrounds = 100)
-# 
-# # Check the feature importance
-# importance_vars <- xgb.importance(model=xgb_fit, feature_names = colnames(train_matrix))
-# head(importance_vars, 20)
-# 
-# # Try to plot a partial dependency plot of one of the features
-# ## - KO partial(xgb_fit, train = bench.train, pred.var = "quantum")
-
+## - https://cran.r-project.org/web/packages/xgboost/vignettes/xgboostPresentation.html
+## - https://gist.github.com/dkincaid/87f0fbeb912cf23816c340b4fbe30baa
+## - https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
 ## - https://www.analyticsvidhya.com/blog/2015/12/kaggle-solution-cooking-text-mining-competition/
 ## - https://www.r-bloggers.com/an-introduction-to-xgboost-r-package/
+## - https://www.kaggle.com/tqchen/otto-group-product-classification-challenge/understanding-xgboost-model-on-otto-data
 
-# xgbmodel.predict <- predict(xgb_fit, newdata = bench.dtm_test.tfidf, type = 'class')
-# xgbmodel.predict.class <- levels(bench.train$category)[xgbmodel.predict]
-# 
-# bench.test$xgbmodel.predict.class <- xgbmodel.predict.class
-# 
-# bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != xgbmodel.predict.class]))/dim(bench.test)[[1]])
-# print(bench.xgboost_classifier.accuracy)
-# 
-# importance_matrix <- xgb.importance(bench.dtm_train.tfidf@Dimnames[[2]], model = xgb_fit)
-# xgb.plot.importance(head(importance_matrix,20))
-# 
-# xgb.plot.deepness(model = xgb_fit)
-# 
-# ## - https://www.kaggle.com/tqchen/otto-group-product-classification-challenge/understanding-xgboost-model-on-otto-data
-# 
-# cv.nround <- 20
-# cv.nfold <- 10
-# 
-# bst.cv = xgb.cv(param=xgb_params, data = train_matrix, nfold = cv.nfold, nrounds = cv.nround)
-# 
+if(param.bench.xgboost)
+{
+  library(xgboost)
+  library(igraph)
+  library(ggplot2)
+  t0 <- Sys.time()
+  
+  xgb_params = list(
+    objective = "multi:softmax",
+    num_class = length(levels(bench.train$category)) + 1,
+    eta = 0.1,
+    max.depth = 5,
+    eval_metric = "mlogloss")
+  
+  bench.xgboost_classifier.trainmatrix <- xgb.DMatrix(bench.dtm_train.tfidf, label = bench.train[['category']])
+  
+  # Analyse exploratoire preliminaire
+  # cv.nfold <- 5
+  # xgb.nround <- 5
+  # bench.xgboost.cv = xgb.cv(param=xgb_params, data = bench.xgboost_classifier.trainmatrix, nfold = cv.nfold, nrounds = xgb.nround)
+  
+  xgb_params$max.depth <- 5
+  xgb.nround <- 400
+  bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround)
+  
+  # Check the feature importance
+  importance_vars <- xgb.importance(model=bench.xgboost_classifier, feature_names = colnames(bench.xgboost_classifier.trainmatrix))
+  head(importance_vars, 20)
+  
+  bench.xgboost.preds <- predict(bench.xgboost_classifier, newdata = bench.dtm_test.tfidf, type = 'class')
+  bench.test$bench.xgboost.preds <- levels(bench.train$category)[bench.xgboost.preds]
+  bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.xgboost.preds]))/dim(bench.test)[[1]])
+
+  xgb.importance_matrix <- xgb.importance(bench.dtm_train.tfidf@Dimnames[[2]], model = bench.xgboost_classifier)
+  head(xgb.importance_matrix, 20)
+  
+  # xgb.ggplot.importance(head(xgb.importance_matrix,20))
+  # xgb.ggplot.deepness(model = bench.xgboost_classifier)
+  
+  tend <- Sys.time()
+  print(bench.xgboost_classifier.accuracy)
+  print(difftime(tend, t0, units = 'mins'))
+}
 
 
 
@@ -645,7 +680,6 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 ## -- https://stats.stackexchange.com/questions/21717/how-to-train-and-validate-a-neural-network-model-in-r
 
 # library(caret)
-# library(nnet)
 # library(tidyr)
 # KO pareil
 # caret.fit <- train(x = as.matrix(bench.dtm_train.tfidf),
@@ -653,44 +687,42 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 #                    method = "nnet", size = 5, MaxNWts = 25000,
 #                    maxit = 30)
 
-# KO, prediction 0 ?
 # pcanet.model <- pcaNNet(x = as.matrix(bench.dtm_train.tfidf),
 #                          y = bench.train[['category']],
 #                          size = 5, MaxNWts = 10000, thresh = 0.95 )
-
-# weights:  13302
-# initial  value 16882.917811 
-# final  value 7808.000000 
-# converged
-
-pcanet.preds <- predict(pcanet.model, newdata = as.matrix(bench.dtm_test.tfidf))
-head(pcanet.preds)
-
-pcanet.preds.class <- as.data.table(pcanet.preds) %>%
-  gather(category, bval) %>%
-  filter(bval == 1) %>%
-  select(category)
-
-bench.test$pcanet.preds.class <- pcanet.preds.class
-  
-bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.class]))/dim(bench.test)[[1]])
-print(bench.pcanet.accuracy)
-
-
-dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), bench.train[['category']]))
-colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
-
-dt.bench.dtm_test.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_test.tfidf), bench.test[['category']]))
-colnames(dt.bench.dtm_test.tfidf)[dim(dt.bench.dtm_test.tfidf)[2]] <- 'category'
-
-pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 210000)
-
-pcanet.model.2.preds <- predict(pcanet.model.2, newdata = dt.bench.dtm_test.tfidf)
-
-pcanet.preds.2 <- factor(pcanet.model.2.preds, labels = unique(levels(bench.test$category)))
-bench.test$pcanet.preds.2 <- pcanet.preds.2
-
-bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.2]))/dim(bench.test)[[1]])
-
-print(bench.pcanet.accuracy) # "Accuracy : 74.77 %"
+# # weights:  13302
+# # initial  value 16882.917811 
+# # final  value 7808.000000 
+# # converged
+# 
+# pcanet.preds <- predict(pcanet.model, newdata = as.matrix(bench.dtm_test.tfidf))
+# head(pcanet.preds)
+# 
+# pcanet.preds.class <- as.data.table(pcanet.preds) %>%
+#   gather(category, bval) %>%
+#   filter(bval == 1) %>%
+#   select(category)
+# 
+# bench.test$pcanet.preds.class <- pcanet.preds.class
+#   
+# bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.class]))/dim(bench.test)[[1]])
+# print(bench.pcanet.accuracy)
+# 
+# 
+# dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), bench.train[['category']]))
+# colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
+# 
+# dt.bench.dtm_test.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_test.tfidf), bench.test[['category']]))
+# colnames(dt.bench.dtm_test.tfidf)[dim(dt.bench.dtm_test.tfidf)[2]] <- 'category'
+# 
+# pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 21000)
+# 
+# pcanet.model.2.preds <- predict(pcanet.model.2, newdata = dt.bench.dtm_test.tfidf)
+# 
+# pcanet.preds.2 <- factor(pcanet.model.2.preds, labels = unique(levels(bench.test$category)))
+# bench.test$pcanet.preds.2 <- pcanet.preds.2
+# 
+# bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.2]))/dim(bench.test)[[1]])
+# 
+# print(bench.pcanet.accuracy) # "Accuracy : 74.77 %"
 
