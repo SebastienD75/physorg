@@ -538,7 +538,7 @@ if(param.bench.xgboost)
   # bench.xgboost.cv = xgb.cv(param=xgb_params, data = bench.xgboost_classifier.trainmatrix, nfold = cv.nfold, nrounds = xgb.nround)
   
   xgb_params$max.depth <- 5
-  xgb.nround <- 400
+  xgb.nround <- 490
   bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround)
   
   # Check the feature importance
