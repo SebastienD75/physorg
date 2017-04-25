@@ -538,7 +538,7 @@ if(param.bench.xgboost)
   # bench.xgboost.cv = xgb.cv(param=xgb_params, data = bench.xgboost_classifier.trainmatrix, nfold = cv.nfold, nrounds = xgb.nround)
   
   xgb_params$max.depth <- 5
-  xgb.nround <- 400
+  xgb.nround <- 500
   bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround)
   
   # Check the feature importance
@@ -563,45 +563,54 @@ if(param.bench.xgboost)
 
 
 # --------------- SVM kernlab, OK moins bon resultats
+# Physics 
+# C = 3 : "Accuracy : 65.05 %" et 30 min VS glmnet => "Accuracy : 80.03 %"
 
-# library(kernlab)
-# t0 = Sys.time(); bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train.tfidf), 
-#                                                     y = as.vector(bench.train[['category']]),
-#                                                     C= 10, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
-#                                                     prob.model=TRUE
-# ); t1 = Sys.time()
-# 
-# print(difftime(t1, t0, units = 'mins'))
-# 
-# ksvm.predict <- predict(bench.ksvmclass_classifier, newdata = bench.dtm_test.tfidf, type = 'probabilities')
-# 
-# ksvm.predict.gather_prob <- as.data.table(ksvm.predict) %>% 
-#   mutate(id = row_number()) %>% 
-#   gather(category, prob, -id) %>%
-#   group_by(id) %>% 
-#   mutate(better_prob = max(prob)) %>% 
-#   filter(prob == better_prob) %>% 
-#   select(id, category, better_prob) %>% 
-#   arrange(id) %>% 
-#   setDT()
-# 
-# bench.test$ksvm.predict.class <- ksvm.predict.gather_prob$category
-# bench.test$ksvm.predict.prob <- ksvm.predict.gather_prob$better_prob
-# 
-# 
-# #tst[,(cols):=lapply(.SD, as.factor),.SDcols=cols]
-# # ksvm.predict.bool <- as.data.table(ksvm.predict)
-# # ksvm.predict.bool[, (names(ksvm.predict.bool)) := lapply(.SD, function(x) ifelse(x>=0.5,1,0))]
-# # bench.test$ksvm.predict.class <- ksvm.predict.bool %>% 
-# #   gather(category,boolval) %>% 
-# #   filter(boolval == 1) %>% 
-# #   select(category)
-# 
-# bench.ksvm_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != ksvm.predict.class]))/dim(bench.test)[[1]])
-# print(bench.ksvm_classifier.accuracy)
-# 
-# 
-# 
+if(param.bench.svmk)
+{
+  library(kernlab)
+  library(tidyr)
+  
+  t0 = Sys.time(); 
+  bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train.tfidf),
+                                                      y = bench.train[['category']],
+                                                      C = 5, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
+                                                      prob.model=TRUE
+  ); t1 = Sys.time()
+  
+  print(difftime(t1, t0, units = 'mins'))
+  
+  ksvm.predict <- predict(bench.ksvmclass_classifier, newdata = bench.dtm_test.tfidf, type = 'probabilities')
+  
+  ksvm.predict.gather_prob <- as.data.table(ksvm.predict) %>%
+    mutate(id = row_number()) %>%
+    gather(category, prob, -id) %>%
+    group_by(id) %>%
+    mutate(maxprob = max(prob)) %>%
+    filter(prob == maxprob) %>%
+    select(id, category, maxprob) %>%
+    arrange(id) %>%
+    setDT()
+  
+  bench.test$ksvm.predict.class <- ksvm.predict.gather_prob$category
+  bench.test$ksvm.predict.prob <- ksvm.predict.gather_prob$maxprob
+  
+  #tst[,(cols):=lapply(.SD, as.factor),.SDcols=cols]
+  # ksvm.predict.bool <- as.data.table(ksvm.predict)
+  # ksvm.predict.bool[, (names(ksvm.predict.bool)) := lapply(.SD, function(x) ifelse(x>=0.5,1,0))]
+  # bench.test$ksvm.predict.class <- ksvm.predict.bool %>%
+  #   gather(category,boolval) %>%
+  #   filter(boolval == 1) %>%
+  #   select(category)
+  
+  bench.ksvm_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != ksvm.predict.class]))/dim(bench.test)[[1]])
+  
+  tend <- Sys.time()
+  print(bench.ksvm_classifier.accuracy)
+  print(difftime(tend, t0, units = 'mins'))
+}
+
+
 
 
 # --------------- SVM e1071, KO memory et predict
@@ -715,7 +724,7 @@ if(param.bench.xgboost)
 # dt.bench.dtm_test.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_test.tfidf), bench.test[['category']]))
 # colnames(dt.bench.dtm_test.tfidf)[dim(dt.bench.dtm_test.tfidf)[2]] <- 'category'
 # 
-# pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 21000)
+# pcanet.model.2 <- multinom(category ~ ., data = dt.bench.dtm_train.tfidf, MaxNWts = 210000)
 # 
 # pcanet.model.2.preds <- predict(pcanet.model.2, newdata = dt.bench.dtm_test.tfidf)
 # 
