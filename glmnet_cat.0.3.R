@@ -83,7 +83,7 @@
   ## -- CAT / SUB CAT --
   param.mutate.subcat = TRUE
   param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.mutate.subcat.cat <- c('Physics')
+  param.mutate.subcat.cat <- c('Health')
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                     'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                     'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
@@ -475,6 +475,39 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 #   [1] "Model 111 saved (0.4 min): pct data=1, dim_train=(7808, 2926), Accuracy : 80.03 %"
 #   Time difference of 0.5773865 mins
 
+
+# ------------------------------------  param.mutate.subcat.cat <- c('Health')
+#   Categories to learn :
+#   <Cancer> <Diseases, Conditions, Syndromes> <Genetics> <Health> <HIV & AIDS> <Medical research> <Medications> <Neuroscience> <Psychology & Psychiatry>
+#   
+#   [1/1]Testing model with param.pctdata = 1 
+#   [1] "Train nb articles = 20947"
+#   [1] "bench.train_tokens.time: 8.85s"
+#   [1] "Do ngram : bench.train.vocab.stem.time: 8.27s"
+#   [1/1]Testing model with prune = (count_min=150, prop_max=0.9, prop_min=0) 
+#   [1] "bench.train.vocab.stem.prune.time: 0.30s"
+#   [1] "bench.dtm_train.time: 4.55s"
+#   [1] "bench.dtm_test: 2.08s"
+#   [1/1]Training model with param.cv.nfold = 3 
+#   model 121 - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:3, THRESH:0.01, MAXIT:100 + featureh=FALSE, stem=FALSE, ngram=TRUE, prune=TRUE :  prune.params = countmin:150, doc.prop.max:0.9, doc.prop.min:0 
+#   [1] "bench.glmnet_classifier.tfidf.time: 1.30m"
+#   [1] "bench.preds.class: 0.23s"
+#   [1] "Accuracy : 74.36 %"
+#   # A tibble: 9 × 4
+#   category     n       pct accuracy
+#   <fctr> <int>     <dbl>    <dbl>
+#     1                          Cancer  1442 16.065062 90.08322
+#   2                          Health  2055 22.894385 83.94161
+#   3                      HIV & AIDS   204  2.272727 80.39216
+#   4         Psychology & Psychiatry   701  7.809715 79.17261
+#   5                Medical research  1933 21.535205 70.15003
+#   6 Diseases, Conditions, Syndromes  1448 16.131907 65.26243
+#   7                        Genetics   406  4.523173 57.14286
+#   8                    Neuroscience   481  5.358734 52.80665
+#   9                     Medications   306  3.409091 47.38562
+#   [1] "Model 121 saved (1.3 min): pct data=1, dim_train=(20947, 6084), Accuracy : 74.36 %"
+#   Time difference of 1.649866 mins
+#   
 ## --------------- Autres models possibles --------------- 
 
 
@@ -501,13 +534,19 @@ if(param.bench.naivebayes)
 }
 
 
+# --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
 # param.mutate.subcat.cat <- c('Physics')
-# --------------- xgboost : 
 # 5/200   [1] "Accuracy : 80.03 %" Time difference of 2.574376 mins
 # 5/300   [1] "Accuracy : 80.45 %" Time difference of 3.659111 mins
 # 5/500   [1] "Accuracy : 80.75 %" Time difference of 5.820309 mins
 # 6.600   [1] "Accuracy : 80.69 %" Time difference of 7.327472 mins
 # 3/1000  [1] "Accuracy : 80.60 %" : Time difference of 7.901743 mins
+
+# param.mutate.subcat.cat <- c('Health')
+# 5/500 [1] "Accuracy : 74.69 %" Time difference of 20.68896 mins
+# 3/700 [1] "Accuracy : 74.11 %" Time difference of 18.91857 mins
+# 7/300 [1] "Accuracy : 74.53 %" Time difference of 16.81269 mins 
+# 3/300 [1] "Accuracy : 73.52 %" Time difference of 8.223368 mins
 
 ## - https://cran.r-project.org/web/packages/xgboost/vignettes/xgboostPresentation.html
 ## - https://gist.github.com/dkincaid/87f0fbeb912cf23816c340b4fbe30baa
