@@ -12,6 +12,7 @@
   library(text2vec)
   library(SnowballC)
   library(doParallel)
+  library(ggplot2)
   # library(textstem)
 }
 
@@ -559,7 +560,6 @@ if(param.bench.xgboost)
 {
   library(xgboost)
   library(igraph)
-  library(ggplot2)
   t0 <- Sys.time()
   
   xgb_params = list(
@@ -650,7 +650,93 @@ if(param.bench.svmk)
 }
 
 
-
+if(param.pca)
+{
+  library(FactoMineR)
+  library(Matrix)
+  
+  t0 <- Sys.time()
+  dt.bench.dtm_train.tfidf <-  as.data.table(as.matrix(bench.dtm_train.tfidf))
+  pca.dtm_train.tfidf <- PCA(dt.bench.dtm_train.tfidf[,!'category', with = FALSE], graph = FALSE, ncp = dim(dt.bench.dtm_train.tfidf)[[2]] - 1); tend <- Sys.time()
+  
+  print(difftime(tend,t0,units = 'mins')) #  3.454795 mins pour sub cat physics
+  dim(pca.dtm_train.tfidf$eig)
+  
+  pca.pred.dtm_test.tfidf <- predict(pca.dtm_train.tfidf, as.matrix(bench.dtm_test.tfidf))
+  
+  
+  df.pct_varexp <- data.frame(dim = c(0), pct_varexp = c(0))
+  for (pct in 1:100) {
+    
+    bench.pca.cp.i = pca.dtm_train.tfidf$eig %>%
+      filter((100 - `cumulative percentage of variance`) > (100 - pct))
+    
+    df.pct_varexp <- rbind(df.pct_varexp, c(dim(bench.pca.cp.i)[1], pct))
+    
+  }
+  head(df.pct_varexp)
+  ggplot(data = df.pct_varexp, aes(x = pct_varexp, y = dim)) + 
+    geom_point()  +
+    geom_line(aes(x = 95)) +
+    geom_line(aes(x = 98)) +
+    geom_line(aes(x = 99))
+  
+  
+  param.pca.pct_varexp <- 99
+  
+  bench.pca.cp <- pca.dtm_train.tfidf$eig %>%
+    filter((100 - `cumulative percentage of variance`) > (100 - param.pca.pct_varexp))
+  
+  dim(bench.pca.cp)
+  
+  pca.cp_train.smat <- Matrix(data = as.matrix(pca.dtm_train.tfidf$ind$coord[,1:dim(bench.pca.cp)[1]]), sparse = TRUE) 
+  pca.cp_test.smat <- Matrix(data = as.matrix(pca.pred.dtm_test.tfidf$coord[,1:dim(bench.pca.cp)[1]]), sparse = TRUE) 
+  
+  
+  print(paste(ceiling(10*100 * (dim(bench.dtm_train.tfidf)[2] - dim(pca.cp_train.smat)[2])/dim(bench.dtm_train.tfidf)[2])/10, '% de gain sur le nombre de variable'))
+  head(bench.pca.cp)
+  
+  gc()
+  pca.bench.glmnet_classifier.time <- system.time(
+    pca.bench.glmnet_classifier <- cv.glmnet(x = pca.cp_train.smat, y = bench.train[['category']], 
+                                             # family = 'binomial',                              
+                                             family = 'multinomial', 
+                                             type.multinomial="grouped", 
+                                             # L1 penalty
+                                             alpha = 0.5,
+                                             # ROC curve
+                                             type.measure = "auc",
+                                             nfolds = param.bench.glmnet.NFOLDS,
+                                             thresh = param.bench.glmnet.THRESH,
+                                             maxit = param.bench.glmnet.MAXIT,
+                                             parallel = TRUE)
+    
+  ); print(sprintf('pca.bench.glmnet_classifier.time: %0.2fm', pca.bench.glmnet_classifier.time[[3]]/60))
+  
+  plot(pca.bench.glmnet_classifier)
+  
+  pca.bench.preds.class.time <- system.time(
+    bench.test$bench.preds.class <-  predict(pca.bench.glmnet_classifier, pca.cp_test.smat, s = "lambda.min", type = 'class')
+  ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
+  
+  pca.bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
+  print(pca.bench.glmnet_classifier.accuracy) # [1] "Accuracy : 77.91 %", 3min, "Accuracy : 77.94 %" elastic, "Accuracy : 74.86 %" avec ridge
+  
+  ##--  Utilisation avec un reseau de neuronne
+  
+  # library(nnet)
+  # nnet.size <- 7
+  # 
+  # nnet.pca.cp_train.smat <- as.data.frame(cbind(as.matrix(pca.dtm_train.tfidf$ind$coord[,1:dim(bench.pca.cp)[1]]), bench.train[['category']]))
+  # colnames(nnet.pca.cp_train.smat)[dim(nnet.pca.cp_train.smat)[2]] <- 'category'
+  # nnet_model <- multinom(category ~ ., data = nnet.pca.cp_train.smat, MaxNWts = (nnet.size * (dim(nnet.pca.cp_train.smat)[2] + 1) + 1))
+  # nnet.preds <- predict(nnet_model, as.matrix(pca.pred.dtm_test.tfidf$coord[,1:dim(bench.pca.cp)[1]]), type = 'class')
+  # head(nnet.preds)
+  # bench.test$nnet.preds.class <- factor(nnet.preds, labels = unique(levels(bench.train$category)))
+  # head(bench.test$nnet.preds.class)
+  # bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != nnet.preds.class]))/dim(bench.test)[[1]])
+  # print(bench.pcanet.accuracy) #  avec PCA : "Accuracy : 54.50 %"
+}
 
 # --------------- SVM e1071, KO memory et predict
 
