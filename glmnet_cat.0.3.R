@@ -108,7 +108,7 @@
     
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 450 # 80 # 40 # (default pkg 1)
+    param.prune.term_count_min.default = 150 # 80 # 40 # (default pkg 1)
     param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
@@ -772,6 +772,12 @@ if(param.pca)
 # [1] "[Nanotechnology] nlevels = 3, size hidden = 5, var = 187, lines = 1531, Accuracy = 67.02 %, time = 1.1min (glmnet: Accuracy : 74.66 %)"
 # [1] "[Nanotechnology] nlevels = 3, size hidden = 7, var = 187, lines = 1531, Accuracy = 62.90 %, time = 1.2min (glmnet: Accuracy : 74.66 %)"
 # [1] "[Nanotechnology] nlevels = 3, size hidden = 7, var = 263, lines = 2041, Accuracy = 67.28 %, time = 3.8min (glmnet: Accuracy : 76.20 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 3, var = 263, lines = 2041, Accuracy = 61.10 %, time = 7.4min (glmnet: Accuracy : 76.20 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 10, var = 263, lines = 2041, Accuracy = 68.99 %, time = 2.2min (glmnet: Accuracy : 76.20 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 10, thresh = 0.005, var = 263, lines = 2041, Accuracy = 69.34 %, time = 2.4min (glmnet: Accuracy : 76.20 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 10, thresh = 0.001, var = 263, lines = 2041, Accuracy = 68.42 %, time = 3.2min (glmnet: Accuracy : 76.20 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 20, thresh = 0.05, var = 263, lines = 2041, Accuracy = 70.25 %, time = 1.4min (glmnet: Accuracy : 76.20 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 20, thresh = 0.05, var = 830, lines = 2041, Accuracy = 62.93 %, time = 90.7min (glmnet: Accuracy : 75.06 %)"
 
 if(param.neuralnet)
 {
@@ -787,7 +793,8 @@ if(param.neuralnet)
   res.factor <- levels(bench.test[['category']]) 
   nb.factor <- length(res.factor)
   
-  param.size_hidden <- 7
+  param.size_hidden <- 20
+  param.threshold <- 0.05
   
   nbvar <- dim(as.matrix(bench.dtm_train.tfidf))[[2]]
   nblines <- dim(as.matrix(bench.dtm_train.tfidf))[[1]]
@@ -816,6 +823,7 @@ if(param.neuralnet)
                   data = bench.neuralnet.train,
                   hidden = c(nbvar,param.size_hidden,nb.factor),
                   act.fct = "logistic",
+                  threshold = param.threshold, # default = 0.01
                   linear.output = FALSE,
                   lifesign = "minimal");tend <- Sys.time()
   
@@ -830,15 +838,17 @@ if(param.neuralnet)
   original_values <- max.col(bench.neuralnet.test[, (nbvar+1):(nbvar+nb.factor)])
   bench.neuralnet.preds.res.class <- max.col(bench.neuralnet.preds.res)
   bench.neuralnet.acc <- mean(bench.neuralnet.preds.res.class == original_values)*100
-  bench.neuralnet_classifier.accuracy <- sprintf("[%s] nlevels = %d, size hidden = %d, var = %d, lines = %d, Accuracy = %0.2f %%, time = %smin (glmnet: %s)", 
+  bench.neuralnet_classifier.accuracy <- sprintf("[%s] nlevels = %d, size hidden = %d, thresh = %s, var = %d, lines = %d, Accuracy = %0.2f %%, time = %smin (glmnet: %s)", 
                                                  param.mutate.subcat.cat, 
                                                  nb.factor,
-                                                 param.size_hidden,
+                                                 param.size_hidden, 
+                                                 param.threshold,
                                                  nbvar,
                                                  nblines,
                                                  bench.neuralnet.acc,
                                                  bench.time, 
-                                                 bench.glmnet_classifier.accuracy)
+                                                 bench.glmnet_classifier.accuracy
+                                                 )
   print(bench.neuralnet_classifier.accuracy) 
   
   
