@@ -17,431 +17,438 @@
 }
 
 # LOAD DATA ---------------------------------------------------------------
-
 {
-  param.dataorg.file <- 'data/physorg.RData'
-  param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.stemmatized.RData'
-  
-  if(!file.exists(param.clean_content.file)) {
-    load(param.dataorg.file)
-    rm(list = setdiff(ls(), c('d.art')))
-    d.art.sc.clean.time <- system.time(
-      d.art.c.bench <- d.art %>%
-        select(url, content, category, subcategory) %>%
-        # suppression des ' qui ne sont pas dans des mots
-        mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
-        # suppression des - qui ne sont pas dans des mots
-        mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
-        # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
-        mutate(content = str_replace_all(content, "[^[A-Za-z]']", " ")) %>%
-        # suppression des mots de une ou deux lettres remplaces par espace
-        mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
-        # transformation en minuscule
-        mutate(content = str_to_lower(content)) %>%
-        # suppressoin des stop words
-        mutate(content = removeWords(content, stopwords())) %>%
-        # suppression des espaces en trop
-        mutate(content = stripWhitespace(content)) %>%
-        # suppression des eventuels NA
-        filter(!is.na(content), !is.na(subcategory), !is.na(url)) %>%
-        # suppression des factor fantoms
-        mutate(subcategory = droplevels(subcategory)) %>%
-        # ajout d un identifiant
-        mutate(id = row_number()) %>%
-        setDT() %>%
-        setkey(id)
-    )
+  {
+    param.dataorg.file <- 'data/physorg.RData'
+    param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.stemmatized.RData'
     
-    d.art.c.bench$content <- d.art.c.bench$content %>%
+    if(!file.exists(param.clean_content.file)) {
+      load(param.dataorg.file)
+      rm(list = setdiff(ls(), c('d.art')))
+      d.art.sc.clean.time <- system.time(
+        d.art.c.bench <- d.art %>%
+          select(url, content, category, subcategory) %>%
+          # suppression des ' qui ne sont pas dans des mots
+          mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
+          # suppression des - qui ne sont pas dans des mots
+          mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
+          # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
+          mutate(content = str_replace_all(content, "[^[A-Za-z]']", " ")) %>%
+          # suppression des mots de une ou deux lettres remplaces par espace
+          mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
+          # transformation en minuscule
+          mutate(content = str_to_lower(content)) %>%
+          # suppressoin des stop words
+          mutate(content = removeWords(content, stopwords())) %>%
+          # suppression des espaces en trop
+          mutate(content = stripWhitespace(content)) %>%
+          # suppression des eventuels NA
+          filter(!is.na(content), !is.na(subcategory), !is.na(url)) %>%
+          # suppression des factor fantoms
+          mutate(subcategory = droplevels(subcategory)) %>%
+          # ajout d un identifiant
+          mutate(id = row_number()) %>%
+          setDT() %>%
+          setkey(id)
+      )
+      
+      d.art.c.bench$content <- d.art.c.bench$content %>%
         lemmatize_strings()
       
-    # d.art.sc.clean$id <- as.character(d.art.sc.clean$id)
-    # setkey(d.art.sc.clean, id)
-    d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
-    d.art.c.bench$url <- NULL
-  } else {
-    load(param.clean_content.file)
+      # d.art.sc.clean$id <- as.character(d.art.sc.clean$id)
+      # setkey(d.art.sc.clean, id)
+      d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
+      d.art.c.bench$url <- NULL
+    } else {
+      load(param.clean_content.file)
+    }
+    
+    protected.obj <- c("protected.obj", "bench.models", "d.art.c.bench")
+    rm(list = setdiff(ls(), protected.obj))
+    param.cleaninloop = c('d.bench', 'd.art.c.bench')
+    gc()
   }
   
-  protected.obj <- c("protected.obj", "bench.models", "d.art.c.bench")
-  rm(list = setdiff(ls(), protected.obj))
-  param.cleaninloop = c('d.bench', 'd.art.c.bench')
-  gc()
-}
-
-
-# PARAMS ------------------------------------------------------------------
-{
-  ## -- COMPUTEUR SPECIFICS --
-  param.doparall.worker = 3
   
-  ## -- PIPLINE --
-  param.doprune = TRUE
-  param.dostem = FALSE
-  param.dongram = TRUE
-  param.dofeaturehashing = FALSE # incompatible avec prune
-  
-  ## -- CAT / SUB CAT --
-  param.mutate.subcat = TRUE
-  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.mutate.subcat.cat <- c('Health')
-  param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
-                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
-                    'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
-                    'Materials Science')
-  
-  ## -- PCT USED DATA 
-  param.pctdata.default = 1
-  param.startmodel.pctdata = 1
-  param.maxmodel.pctdata = 1
-  param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
-  param.train_test <- 0.7
-  
-  
-  ## -- NFOLD --
-  param.cv.nfold.default = 3
-  param.startmodel.cv.nfold <- 1
-  param.maxmodel.cv.nfold <- 1
-  param.cv.nfold.inc <- c(param.cv.nfold.default,4:10)
-  param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
-  param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
- 
-  
-  ## -- PRUNE --
-  param.prune.term_count_min.default = 150 # 80 # 40 # (default pkg 1)
-  param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
-  param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
-  #param.prune.doc_proportion_min.default = # (default Inf)
-  param.startmodel.prune = 1
-  param.maxmodel.prune = 1
-  param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = 30)))),
-                          doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
-                          doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
-  )
-  
-  param.hngram = 2 ** 18
-  param.seed = 20170416
-}
-
-
-# FUNCTIONS  -------------------------------------------------------------------
-{
-  save_model <- function(model_name) 
+  # PARAMS ------------------------------------------------------------------
   {
-    bench.models[[model_name]]$model_name <<- model_name
-    bench.models[[model_name]]$model_num <<- model_num
-    bench.models[[model_name]]$mode_desc <<- mode_desc
+    ## -- COMPUTEUR SPECIFICS --
+    param.doparall.worker = 3
     
-    bench.models[[model_name]]$param.bench.glmnet.NFOLDS <<- param.bench.glmnet.NFOLDS
-    bench.models[[model_name]]$param.bench.glmnet.THRESH <<- param.bench.glmnet.THRESH
-    bench.models[[model_name]]$param.bench.glmnet.MAXIT <<- param.bench.glmnet.MAXIT
+    ## -- PIPLINE --
+    param.doprune = TRUE
+    param.dostem = FALSE
+    param.dongram = FALSE
+    param.dofeaturehashing = FALSE # incompatible avec prune
+    
+    ## -- CAT / SUB CAT --
+    param.mutate.subcat = TRUE
+    param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+    param.mutate.subcat.cat <- c('Nanotechnology')
+    param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
+                      'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
+                      'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
+                      'Materials Science')
+    
+    ## -- PCT USED DATA 
+    param.pctdata.default = 0.4
+    param.startmodel.pctdata = 1
+    param.maxmodel.pctdata = 1
+    param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
+    param.train_test <- 0.7
     
     
-    bench.models[[model_name]]$param.dostem <<- param.dostem
-    bench.models[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
-    bench.models[[model_name]]$param.dongram <<- param.dongram
-    bench.models[[model_name]]$param.doprune <<- param.doprune
-    bench.models[[model_name]]$param.prune.term_count_min <<- param.prune.term_count_min
-    bench.models[[model_name]]$param.prune.doc_proportion_max <<- param.prune.doc_proportion_max
-    bench.models[[model_name]]$param.prune.doc_proportion_min <<- param.prune.doc_proportion_min
+    ## -- NFOLD --
+    param.cv.nfold.default = 3
+    param.startmodel.cv.nfold <- 1
+    param.maxmodel.cv.nfold <- 1
+    param.cv.nfold.inc <- c(param.cv.nfold.default,4:10)
+    param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
+    param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
-    bench.models[[model_name]]$param.pctdata <<- param.pctdata
-    bench.models[[model_name]]$param.train_test <<- param.train_test
-    bench.models[[model_name]]$param.dorpsc <<- param.dorpsc
     
-    bench.models[[model_name]]$bench.train_tokens.time <<- bench.train_tokens.time
-    bench.models[[model_name]]$bench.dtm_train.time <<- bench.dtm_train.time
-    bench.models[[model_name]]$bench.dtm_test.time <<- bench.dtm_test.time
-    bench.models[[model_name]]$bench.dtm_train.dim <<- dim(bench.dtm_train)
-    bench.models[[model_name]]$bench.dtm_test.dim <<- dim(bench.dtm_test)
-    bench.models[[model_name]]$bench.vectorizer <<- bench.vectorizer
-    bench.models[[model_name]]$bench.glmnet_classifier.time <<- bench.glmnet_classifier.time
-    bench.models[[model_name]]$bench.glmnet_classifier <<- bench.glmnet_classifier
-    bench.models[[model_name]]$bench.preds.class.time <<- bench.preds.class.time
-    bench.models[[model_name]]$bench.glmnet_classifier.accuracy <<- bench.glmnet_classifier.accuracy
-    bench.models[[model_name]]$bench.glmnet_classifier.accuracy_cat <<- res
+    ## -- PRUNE --
+    param.prune.term_count_min.default = 450 # 80 # 40 # (default pkg 1)
+    param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
+    param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
+    #param.prune.doc_proportion_min.default = # (default Inf)
+    param.startmodel.prune = 1
+    param.maxmodel.prune = 1
+    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = 30)))),
+                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
+                            doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
+    )
     
-    print(sprintf("Model %s saved (%0.1f min): pct data=%s, dim_train=(%d, %d), %s", 
-                  model_name, 
-                  bench.glmnet_classifier.time[[3]]/60,
-                  bench.models[[model_name]]$param.pctdata,
-                  bench.models[[model_name]]$bench.dtm_train.dim[[1]],
-                  bench.models[[model_name]]$bench.dtm_train.dim[[2]],
-                  bench.models[[model_name]]$bench.glmnet_classifier.accuracy))
+    param.hngram = 2 ** 18
+    param.seed = 20170416
+    
+    param.bench.naivebayes = FALSE
+    param.bench.xgboost = FALSE
+    param.bench.svmk = FALSE
+    param.pca = FALSE
+    param.neuralnet = TRUE
   }
   
-  print_model <- function(model) {
-    params <- c('model_name', 'model_num','param.pctdata','mode_desc','bench.dtm_train.dim', 'bench.glmnet_classifier.accuracy')
-    lapply(model, function(m) {
-      lapply(params, function(p) {
-        str <- paste0(p, ':', m[[p]])
-        str <- gsub('(.*)\\$.*', ':\\1',str)
-        print(str)
+  
+  # FUNCTIONS  -------------------------------------------------------------------
+  {
+    save_model <- function(model_name) 
+    {
+      bench.models[[model_name]]$model_name <<- model_name
+      bench.models[[model_name]]$model_num <<- model_num
+      bench.models[[model_name]]$mode_desc <<- mode_desc
+      
+      bench.models[[model_name]]$param.bench.glmnet.NFOLDS <<- param.bench.glmnet.NFOLDS
+      bench.models[[model_name]]$param.bench.glmnet.THRESH <<- param.bench.glmnet.THRESH
+      bench.models[[model_name]]$param.bench.glmnet.MAXIT <<- param.bench.glmnet.MAXIT
+      
+      
+      bench.models[[model_name]]$param.dostem <<- param.dostem
+      bench.models[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
+      bench.models[[model_name]]$param.dongram <<- param.dongram
+      bench.models[[model_name]]$param.doprune <<- param.doprune
+      bench.models[[model_name]]$param.prune.term_count_min <<- param.prune.term_count_min
+      bench.models[[model_name]]$param.prune.doc_proportion_max <<- param.prune.doc_proportion_max
+      bench.models[[model_name]]$param.prune.doc_proportion_min <<- param.prune.doc_proportion_min
+      
+      bench.models[[model_name]]$param.pctdata <<- param.pctdata
+      bench.models[[model_name]]$param.train_test <<- param.train_test
+      bench.models[[model_name]]$param.dorpsc <<- param.dorpsc
+      
+      bench.models[[model_name]]$bench.train_tokens.time <<- bench.train_tokens.time
+      bench.models[[model_name]]$bench.dtm_train.time <<- bench.dtm_train.time
+      bench.models[[model_name]]$bench.dtm_test.time <<- bench.dtm_test.time
+      bench.models[[model_name]]$bench.dtm_train.dim <<- dim(bench.dtm_train)
+      bench.models[[model_name]]$bench.dtm_test.dim <<- dim(bench.dtm_test)
+      bench.models[[model_name]]$bench.vectorizer <<- bench.vectorizer
+      bench.models[[model_name]]$bench.glmnet_classifier.time <<- bench.glmnet_classifier.time
+      bench.models[[model_name]]$bench.glmnet_classifier <<- bench.glmnet_classifier
+      bench.models[[model_name]]$bench.preds.class.time <<- bench.preds.class.time
+      bench.models[[model_name]]$bench.glmnet_classifier.accuracy <<- bench.glmnet_classifier.accuracy
+      bench.models[[model_name]]$bench.glmnet_classifier.accuracy_cat <<- res
+      
+      print(sprintf("Model %s saved (%0.1f min): pct data=%s, dim_train=(%d, %d), %s", 
+                    model_name, 
+                    bench.glmnet_classifier.time[[3]]/60,
+                    bench.models[[model_name]]$param.pctdata,
+                    bench.models[[model_name]]$bench.dtm_train.dim[[1]],
+                    bench.models[[model_name]]$bench.dtm_train.dim[[2]],
+                    bench.models[[model_name]]$bench.glmnet_classifier.accuracy))
+    }
+    
+    print_model <- function(model) {
+      params <- c('model_name', 'model_num','param.pctdata','mode_desc','bench.dtm_train.dim', 'bench.glmnet_classifier.accuracy')
+      lapply(model, function(m) {
+        lapply(params, function(p) {
+          str <- paste0(p, ':', m[[p]])
+          str <- gsub('(.*)\\$.*', ':\\1',str)
+          print(str)
+        })
       })
-    })
-  }
-}
-
-# INIT -------------------------------------------------------------------
-
-{
-  set.seed(param.seed)
-  registerDoParallel(param.doparall.worker)
-  
-  if(!exists('bench.models')) {
-    bench.models <- list()
+    }
   }
   
-  if(param.mutate.subcat) {   
-    param.cat <- param.mutate.subcat.cat
-  }
+  # INIT -------------------------------------------------------------------
   
-  d.art.c.bench <- d.art.c.bench %>%
-    filter(category %in% param.cat) %>%
-    filter(!(subcategory %in% param.dorpsc)) %>%
-    mutate(category = droplevels(category)) %>%
-    mutate(subcategory = droplevels(subcategory)) %>%
-    setDT() %>%
-    setkey(id)
-  
-  param.maxmodel.pctdata = min(c(length(param.pctdata.inc), param.startmodel.pctdata + param.maxmodel.pctdata - 1))
-  param.maxmodel.cv.nfold =  min(c(length(param.cv.nfold.inc), param.startmodel.cv.nfold + param.maxmodel.cv.nfold - 1))
-  ## TODO enlever la valeur 1  trouver un meilleur moyen
-  param.maxmodel.prune = min(c(length(param.prune.inc[[1]]), param.startmodel.prune + param.maxmodel.prune - 1))
-  
-  if(param.mutate.subcat) {
-    d.art.c.bench.allcat <- d.art.c.bench
-  }
-}
-
-
-
-# START BENCH -------------------------------------------------------------
-
-
-for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat))) 
-{
-  
-  if(param.mutate.subcat) {
-    d.art.c.bench <- d.art.c.bench.allcat %>%
-      filter(category == param.cat[i_cat]) %>%
-      select(-category) %>%
-      mutate(category = subcategory) %>%
-      select(-subcategory) %>%
+  {
+    set.seed(param.seed)
+    registerDoParallel(param.doparall.worker)
+    
+    if(!exists('bench.models')) {
+      bench.models <- list()
+    }
+    
+    if(param.mutate.subcat) {   
+      param.cat <- param.mutate.subcat.cat
+    }
+    
+    d.art.c.bench <- d.art.c.bench %>%
+      filter(category %in% param.cat) %>%
+      filter(!(subcategory %in% param.dorpsc)) %>%
       mutate(category = droplevels(category)) %>%
+      mutate(subcategory = droplevels(subcategory)) %>%
       setDT() %>%
       setkey(id)
+    
+    param.maxmodel.pctdata = min(c(length(param.pctdata.inc), param.startmodel.pctdata + param.maxmodel.pctdata - 1))
+    param.maxmodel.cv.nfold =  min(c(length(param.cv.nfold.inc), param.startmodel.cv.nfold + param.maxmodel.cv.nfold - 1))
+    ## TODO enlever la valeur 1  trouver un meilleur moyen
+    param.maxmodel.prune = min(c(length(param.prune.inc[[1]]), param.startmodel.prune + param.maxmodel.prune - 1))
+    
+    if(param.mutate.subcat) {
+      d.art.c.bench.allcat <- d.art.c.bench
+    }
   }
   
-  cat('\n','------------------------------------')
-  cat('\n','Categories to learn :\n')
-  cat(paste0('<',levels(d.art.c.bench$category), '>'))
   
-  for(i in param.startmodel.pctdata:param.maxmodel.pctdata)
+  
+  # START BENCH -------------------------------------------------------------
+  
+  
+  for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat))) 
   {
-    param.pctdata <<- param.pctdata.inc[[i]]
-    cat('\n\n',sprintf("[%d/%d]Testing model with param.pctdata = %s", i, param.maxmodel.pctdata, param.pctdata), '\n')
     
-    
-    bench.num_sample = ceiling(param.pctdata * dim(d.art.c.bench)[[1]])
-    bench.all_ids = d.art.c.bench$id
-    bench.train_ids = sample(bench.all_ids, bench.num_sample)
-    d.bench <- d.art.c.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT()
-    
-    d.bench[,id := (.I)]
-    setkey(d.bench, id)
-    
-    bench.num_sample = ceiling(param.train_test * dim(d.bench)[[1]])
-    bench.all_ids = d.bench$id
-    bench.train_ids = sample(bench.all_ids, bench.num_sample)
-    bench.test_ids = setdiff(bench.all_ids, bench.train_ids)
-    bench.train = d.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
-    bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
-    
-    if(length(param.cleaninloop) != 0 && param.startmodel.pctdata == param.maxmodel.pctdata) {
-      rm(list = param.cleaninloop)  
-    }
-    gc()
-    
-    print(paste("Train nb articles =", dim(bench.train)[[1]]))
-    
-    tokenizer.stem = function(x) {
-      tokens = word_tokenizer(x)
-      lapply(tokens, SnowballC::wordStem, language="en")
+    if(param.mutate.subcat) {
+      d.art.c.bench <- d.art.c.bench.allcat %>%
+        filter(category == param.cat[i_cat]) %>%
+        select(-category) %>%
+        mutate(category = subcategory) %>%
+        select(-subcategory) %>%
+        mutate(category = droplevels(category)) %>%
+        setDT() %>%
+        setkey(id)
     }
     
-    if(param.dostem) {
-      
-      bench.train_tokens.time <- system.time(
-        bench.train_tokens <- bench.train$content %>% tokenizer.stem
-      ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
-      
-    } else {
-      
-      bench.train_tokens.time <- system.time(
-        bench.train_tokens <- bench.train$content %>% word_tokenizer
-      ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
-      
-    }
+    cat('\n','------------------------------------')
+    cat('\n','Categories to learn :\n')
+    cat(paste0('<',levels(d.art.c.bench$category), '>'))
     
-    bench.it_train <- itoken(bench.train_tokens, 
-                             ids = bench.train$id,
-                             progressbar = FALSE)
-    
-    bench.it_test <- bench.test$content %>% 
-      word_tokenizer %>%
-      itoken(ids = bench.test$id, progressbar = FALSE)
-    
-    if(param.dofeaturehashing) {
-      param.doprune = FALSE
-    }
-    
-    if(!param.doprune) {
-      param.maxmodel.prune = 1
-      param.startmodel.prune = 1
-    }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
+    for(i in param.startmodel.pctdata:param.maxmodel.pctdata)
     {
-      ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
-      ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
-      param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-      param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
-      param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
-
-      t0 = Sys.time()
-      if(param.dofeaturehashing) {
+      param.pctdata <<- param.pctdata.inc[[i]]
+      cat('\n\n',sprintf("[%d/%d]Testing model with param.pctdata = %s", i, param.maxmodel.pctdata, param.pctdata), '\n')
+      
+      
+      bench.num_sample = ceiling(param.pctdata * dim(d.art.c.bench)[[1]])
+      bench.all_ids = d.art.c.bench$id
+      bench.train_ids = sample(bench.all_ids, bench.num_sample)
+      d.bench <- d.art.c.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT()
+      
+      d.bench[,id := (.I)]
+      setkey(d.bench, id)
+      
+      bench.num_sample = ceiling(param.train_test * dim(d.bench)[[1]])
+      bench.all_ids = d.bench$id
+      bench.train_ids = sample(bench.all_ids, bench.num_sample)
+      bench.test_ids = setdiff(bench.all_ids, bench.train_ids)
+      bench.train = d.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
+      bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
+      
+      if(length(param.cleaninloop) != 0 && param.startmodel.pctdata == param.maxmodel.pctdata) {
+        rm(list = param.cleaninloop)  
+      }
+      gc()
+      
+      print(paste("Train nb articles =", dim(bench.train)[[1]]))
+      
+      tokenizer.stem = function(x) {
+        tokens = word_tokenizer(x)
+        lapply(tokens, SnowballC::wordStem, language="en")
+      }
+      
+      if(param.dostem) {
         
-        bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
-        bench.vectorizer <- bench.h_vectorizer
-        
-        bench.dtm_train.time <- system.time(
-          bench.dtm_train<-create_dtm(bench.it_train, bench.h_vectorizer)
-        ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
-        
-        bench.dtm_test.time <- system.time(
-          bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
-        ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
-        
+        bench.train_tokens.time <- system.time(
+          bench.train_tokens <- bench.train$content %>% tokenizer.stem
+        ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
         
       } else {
         
+        bench.train_tokens.time <- system.time(
+          bench.train_tokens <- bench.train$content %>% word_tokenizer
+        ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
         
-        if(param.dongram) {
+      }
+      
+      bench.it_train <- itoken(bench.train_tokens, 
+                               ids = bench.train$id,
+                               progressbar = FALSE)
+      
+      bench.it_test <- bench.test$content %>% 
+        word_tokenizer %>%
+        itoken(ids = bench.test$id, progressbar = FALSE)
+      
+      if(param.dofeaturehashing) {
+        param.doprune = FALSE
+      }
+      
+      if(!param.doprune) {
+        param.maxmodel.prune = 1
+        param.startmodel.prune = 1
+      }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
+      {
+        ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
+        ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
+        param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
+        param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
+        param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
+        
+        t0 = Sys.time()
+        if(param.dofeaturehashing) {
           
-          bench.train.vocab.stem.time <- system.time(
-            bench.train.vocab.stem<- create_vocabulary(bench.it_train, ngram = c(1L, 2L))
-          ); print(sprintf('Do ngram : bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+          bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
+          bench.vectorizer <- bench.h_vectorizer
+          
+          bench.dtm_train.time <- system.time(
+            bench.dtm_train<-create_dtm(bench.it_train, bench.h_vectorizer)
+          ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
+          
+          bench.dtm_test.time <- system.time(
+            bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
+          ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
+          
           
         } else {
           
-          bench.train.vocab.stem.time <- system.time(
-            bench.train.vocab.stem <- create_vocabulary(bench.it_train)
-          ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
           
+          if(param.dongram) {
+            
+            bench.train.vocab.stem.time <- system.time(
+              bench.train.vocab.stem<- create_vocabulary(bench.it_train, ngram = c(1L, 2L))
+            ); print(sprintf('Do ngram : bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+            
+          } else {
+            
+            bench.train.vocab.stem.time <- system.time(
+              bench.train.vocab.stem <- create_vocabulary(bench.it_train)
+            ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+            
+          }
+          
+          if(param.doprune) {
+            
+            cat(sprintf("[%d/%d]Testing model with prune = (count_min=%s, prop_max=%s, prop_min=%s)", 
+                        i_prune, param.maxmodel.prune, param.prune.term_count_min, param.prune.doc_proportion_max, param.prune.doc_proportion_min), '\n')
+            
+            bench.train.vocab.stem.prune.time <- system.time(
+              bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
+                                                         term_count_min = param.prune.term_count_min,
+                                                         doc_proportion_max = param.prune.doc_proportion_max,
+                                                         doc_proportion_min = param.prune.doc_proportion_min)
+            ); print(sprintf('bench.train.vocab.stem.prune.time: %0.2fs', bench.train.vocab.stem.prune.time[[3]]))
+            
+          }
+          
+          bench.vectorizer <- vocab_vectorizer(bench.train.vocab.stem)
+          
+          bench.dtm_train.time <- system.time(
+            bench.dtm_train<-create_dtm(bench.it_train, bench.vectorizer)
+          ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
+          
+          bench.dtm_test.time <- system.time(
+            bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
+          ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
         }
         
-        if(param.doprune) {
+        gc()
+        for(i_nfold in param.startmodel.cv.nfold:param.maxmodel.cv.nfold)
+        {
+          param.bench.glmnet.NFOLDS <<- param.cv.nfold.inc[[i_nfold]]
+          cat(sprintf("[%d/%d]Training model with param.cv.nfold = %d", i_nfold, param.maxmodel.cv.nfold, param.bench.glmnet.NFOLDS), '\n')
           
-          cat(sprintf("[%d/%d]Testing model with prune = (count_min=%s, prop_max=%s, prop_min=%s)", 
-                      i_prune, param.maxmodel.prune, param.prune.term_count_min, param.prune.doc_proportion_max, param.prune.doc_proportion_min), '\n')
+          param.bench.glmnet.THRESH <- param.bench.glmnet.THRESH.default
+          param.bench.glmnet.MAXIT <- param.bench.glmnet.MAXIT.default
+          model_name <- paste0(as.character(i), as.character(length(bench.models) + 1), as.character(i_nfold))
+          model_num <- as.numeric(model_name)
           
-          bench.train.vocab.stem.prune.time <- system.time(
-            bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
-                                                       term_count_min = param.prune.term_count_min,
-                                                       doc_proportion_max = param.prune.doc_proportion_max,
-                                                       doc_proportion_min = param.prune.doc_proportion_min)
-          ); print(sprintf('bench.train.vocab.stem.prune.time: %0.2fs', bench.train.vocab.stem.prune.time[[3]]))
+          mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, stem=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
+                               model_num,
+                               param.bench.glmnet.NFOLDS,
+                               param.bench.glmnet.THRESH,
+                               param.bench.glmnet.MAXIT,
+                               param.dofeaturehashing,
+                               param.dostem,
+                               param.dongram,
+                               param.doprune,
+                               param.prune.term_count_min,
+                               param.prune.doc_proportion_max,
+                               param.prune.doc_proportion_min
+          )
+          cat(mode_desc,'\n')
+          tfidf = TfIdf$new()
+          bench.dtm_train.tfidf = fit_transform(bench.dtm_train, tfidf)
+          # tfidf modified by fit_transform() call!
+          # apply pre-trained tf-idf transformation to test data
+          bench.dtm_test.tfidf  = create_dtm(bench.it_test, bench.vectorizer) %>% 
+            transform(tfidf)
           
+          gc()
+          bench.glmnet_classifier.time <- system.time(
+            bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train.tfidf, y = bench.train[['category']], 
+                                                 # family = 'binomial',                              
+                                                 family = 'multinomial', 
+                                                 type.multinomial="grouped", 
+                                                 # L1 penalty
+                                                 alpha = 1,
+                                                 # ROC curve
+                                                 type.measure = "auc",
+                                                 nfolds = param.bench.glmnet.NFOLDS,
+                                                 thresh = param.bench.glmnet.THRESH,
+                                                 maxit = param.bench.glmnet.MAXIT,
+                                                 parallel = TRUE)
+            
+          ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fm', bench.glmnet_classifier.time[[3]]/60))
+          
+          plot(bench.glmnet_classifier)
+          
+          bench.preds.class.time <- system.time(
+            bench.test$bench.preds.class <-  predict(bench.glmnet_classifier, bench.dtm_test.tfidf, s = "lambda.min", type = 'class')
+          ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
+          
+          bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
+          print(bench.glmnet_classifier.accuracy)
+          
+          res <- bench.test %>%
+            mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
+            group_by(category) %>%
+            # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
+            summarise(n = n(),
+                      pct = 100*n/dim(bench.test)[[1]],
+                      # words = sum(words),
+                      accurate = sum(accurate),
+                      accuracy = (100*accurate/n)) %>%
+            # select(category, n, pct, words, accuracy) %>%
+            select(category, n, pct, accuracy) %>%
+            arrange(-accuracy)
+          
+          print(res)
+          
+          save_model(model_name)
+          
+          gc()
         }
-        
-        bench.vectorizer <- vocab_vectorizer(bench.train.vocab.stem)
-        
-        bench.dtm_train.time <- system.time(
-          bench.dtm_train<-create_dtm(bench.it_train, bench.vectorizer)
-        ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
-        
-        bench.dtm_test.time <- system.time(
-          bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
-        ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
+        print(difftime(Sys.time(), t0, units = 'mins'))
       }
-      
-      gc()
-      for(i_nfold in param.startmodel.cv.nfold:param.maxmodel.cv.nfold)
-      {
-        param.bench.glmnet.NFOLDS <<- param.cv.nfold.inc[[i_nfold]]
-        cat(sprintf("[%d/%d]Training model with param.cv.nfold = %d", i_nfold, param.maxmodel.cv.nfold, param.bench.glmnet.NFOLDS), '\n')
-        
-        param.bench.glmnet.THRESH <- param.bench.glmnet.THRESH.default
-        param.bench.glmnet.MAXIT <- param.bench.glmnet.MAXIT.default
-        model_name <- paste0(as.character(i), as.character(length(bench.models) + 1), as.character(i_nfold))
-        model_num <- as.numeric(model_name)
-        
-        mode_desc <- sprintf('model %d - text2vect tfidf cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, stem=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
-                             model_num,
-                             param.bench.glmnet.NFOLDS,
-                             param.bench.glmnet.THRESH,
-                             param.bench.glmnet.MAXIT,
-                             param.dofeaturehashing,
-                             param.dostem,
-                             param.dongram,
-                             param.doprune,
-                             param.prune.term_count_min,
-                             param.prune.doc_proportion_max,
-                             param.prune.doc_proportion_min
-        )
-        cat(mode_desc,'\n')
-        tfidf = TfIdf$new()
-        bench.dtm_train.tfidf = fit_transform(bench.dtm_train, tfidf)
-        # tfidf modified by fit_transform() call!
-        # apply pre-trained tf-idf transformation to test data
-        bench.dtm_test.tfidf  = create_dtm(bench.it_test, bench.vectorizer) %>% 
-          transform(tfidf)
-        
-        gc()
-        bench.glmnet_classifier.time <- system.time(
-          bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train.tfidf, y = bench.train[['category']], 
-                                               # family = 'binomial',                              
-                                               family = 'multinomial', 
-                                               type.multinomial="grouped", 
-                                               # L1 penalty
-                                               alpha = 1,
-                                               # ROC curve
-                                               type.measure = "auc",
-                                               nfolds = param.bench.glmnet.NFOLDS,
-                                               thresh = param.bench.glmnet.THRESH,
-                                               maxit = param.bench.glmnet.MAXIT,
-                                               parallel = TRUE)
-          
-        ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fm', bench.glmnet_classifier.time[[3]]/60))
-        
-        plot(bench.glmnet_classifier)
-        
-        bench.preds.class.time <- system.time(
-          bench.test$bench.preds.class <-  predict(bench.glmnet_classifier, bench.dtm_test.tfidf, s = "lambda.min", type = 'class')
-        ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
-        
-        bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
-        print(bench.glmnet_classifier.accuracy)
-        
-        res <- bench.test %>%
-          mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-          group_by(category) %>%
-          # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
-          summarise(n = n(),
-                    pct = 100*n/dim(bench.test)[[1]],
-                    # words = sum(words),
-                    accurate = sum(accurate),
-                    accuracy = (100*accurate/n)) %>%
-          # select(category, n, pct, words, accuracy) %>%
-          select(category, n, pct, accuracy) %>%
-          arrange(-accuracy)
-        
-        print(res)
-        
-        save_model(model_name)
-        
-        gc()
-      }
-      print(difftime(Sys.time(), t0, units = 'mins'))
     }
   }
 }
@@ -517,6 +524,9 @@ for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat)))
 
 if(param.bench.naivebayes)
 {
+  cat('\n','------------------------------------')
+  cat('\n','Naive Bayes :\n')
+  
   library(e1071)
   t0 <- Sys.time()
   
@@ -558,6 +568,9 @@ if(param.bench.naivebayes)
 
 if(param.bench.xgboost)
 {
+  cat('\n','------------------------------------')
+  cat('\n','Xg Boost :\n')
+  
   library(xgboost)
   library(igraph)
   t0 <- Sys.time()
@@ -578,7 +591,7 @@ if(param.bench.xgboost)
   
   xgb_params$max.depth <- 5
   xgb.nround <- 500
-  bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround)
+  bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround, verbose = 0)
   
   # Check the feature importance
   importance_vars <- xgb.importance(model=bench.xgboost_classifier, feature_names = colnames(bench.xgboost_classifier.trainmatrix))
@@ -587,7 +600,7 @@ if(param.bench.xgboost)
   bench.xgboost.preds <- predict(bench.xgboost_classifier, newdata = bench.dtm_test.tfidf, type = 'class')
   bench.test$bench.xgboost.preds <- levels(bench.train$category)[bench.xgboost.preds]
   bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.xgboost.preds]))/dim(bench.test)[[1]])
-
+  
   xgb.importance_matrix <- xgb.importance(bench.dtm_train.tfidf@Dimnames[[2]], model = bench.xgboost_classifier)
   head(xgb.importance_matrix, 20)
   
@@ -607,14 +620,17 @@ if(param.bench.xgboost)
 
 if(param.bench.svmk)
 {
+  cat('\n','------------------------------------')
+  cat('\n','SVM (kernlab) :\n')
+  
   library(kernlab)
   library(tidyr)
   
   t0 = Sys.time(); 
   bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train.tfidf),
-                                                      y = bench.train[['category']],
-                                                      C = 5, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
-                                                      prob.model=TRUE
+                                     y = bench.train[['category']],
+                                     C = 5, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
+                                     prob.model=TRUE
   ); t1 = Sys.time()
   
   print(difftime(t1, t0, units = 'mins'))
@@ -650,10 +666,20 @@ if(param.bench.svmk)
 }
 
 
+
+
+# --------------- PCA: tres long pas d'amelioration des resultats à priori
+
+
 if(param.pca)
 {
+  cat('\n','------------------------------------')
+  cat('\n','PCA (FactoMineR) :\n')
+  
   library(FactoMineR)
   library(Matrix)
+  
+  param.alpha.eleastic.net = 0.5
   
   t0 <- Sys.time()
   dt.bench.dtm_train.tfidf <-  as.data.table(as.matrix(bench.dtm_train.tfidf))
@@ -703,7 +729,7 @@ if(param.pca)
                                              family = 'multinomial', 
                                              type.multinomial="grouped", 
                                              # L1 penalty
-                                             alpha = 0.5,
+                                             alpha = param.alpha.eleastic.net,
                                              # ROC curve
                                              type.measure = "auc",
                                              nfolds = param.bench.glmnet.NFOLDS,
@@ -722,7 +748,7 @@ if(param.pca)
   pca.bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
   print(pca.bench.glmnet_classifier.accuracy) # [1] "Accuracy : 77.91 %", 3min, "Accuracy : 77.94 %" elastic, "Accuracy : 74.86 %" avec ridge
   
-  ##--  Utilisation avec un reseau de neuronne
+  ##--  PCA avec Utilisation avec un reseau de neuronne
   
   # library(nnet)
   # nnet.size <- 7
@@ -736,7 +762,88 @@ if(param.pca)
   # head(bench.test$nnet.preds.class)
   # bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != nnet.preds.class]))/dim(bench.test)[[1]])
   # print(bench.pcanet.accuracy) #  avec PCA : "Accuracy : 54.50 %"
+  
 }
+
+
+# --------------- Neural Network : neuralnet, long 13 min pour 0.5% de NAnotechology avec 60% Accuracy VS 77% cv.glmnet
+# param.mutate.subcat.cat <- c('Nanotechnology')
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 3, var = 110, lines = 1021, Accuracy = 65.90 %, time = 0.4min"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 5, var = 187, lines = 1531, Accuracy = 67.02 %, time = 1.1min (glmnet: Accuracy : 74.66 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 7, var = 187, lines = 1531, Accuracy = 62.90 %, time = 1.2min (glmnet: Accuracy : 74.66 %)"
+# [1] "[Nanotechnology] nlevels = 3, size hidden = 7, var = 263, lines = 2041, Accuracy = 67.28 %, time = 3.8min (glmnet: Accuracy : 76.20 %)"
+
+if(param.neuralnet)
+{
+  cat('\n','------------------------------------')
+  cat('\n','Neural Network (neuralnet) :\n')
+  
+  library(neuralnet)
+  library(nnet)
+  
+  t0 <- Sys.time()
+
+  #levels(bench.test[['category']])  
+  res.factor <- levels(bench.test[['category']]) 
+  nb.factor <- length(res.factor)
+  
+  param.size_hidden <- 7
+  
+  nbvar <- dim(as.matrix(bench.dtm_train.tfidf))[[2]]
+  nblines <- dim(as.matrix(bench.dtm_train.tfidf))[[1]]
+  cols <- colnames(bench.dtm_train.tfidf)
+  
+  bench.neuralnet.train <- cbind(as.matrix(bench.dtm_train.tfidf), class.ind(as.factor(bench.train[['category']])))
+  bench.neuralnet.test <- cbind(as.matrix(bench.dtm_test.tfidf), class.ind(as.factor(bench.test[['category']])))
+  
+  scl <- function(x){ (x - min(x))/(max(x) - min(x)) }
+  bench.neuralnet.train <- as.data.table(bench.neuralnet.train)
+  bench.neuralnet.test <- as.data.table(bench.neuralnet.test)
+  
+  names(bench.neuralnet.train) <- c(colnames(bench.dtm_train.tfidf), res.factor)
+  names(bench.neuralnet.test) <- c(colnames(bench.dtm_test.tfidf), res.factor)
+  
+  bench.neuralnet.train[, (cols) := lapply(.SD, scl), .SDcols=cols]
+  bench.neuralnet.test[, (cols) := lapply(.SD, scl), .SDcols=cols]
+  
+  # head(bench.neuralnet.train)
+  # head(bench.neuralnet.test)
+  
+  f <- as.formula(paste(paste(sprintf("`%s`", res.factor), collapse="+"), "~", paste(sprintf("`%s`", cols), collapse="+")))
+  f
+  
+  nn <- neuralnet(f,
+                  data = bench.neuralnet.train,
+                  hidden = c(nbvar,param.size_hidden,nb.factor),
+                  act.fct = "logistic",
+                  linear.output = FALSE,
+                  lifesign = "minimal");tend <- Sys.time()
+  
+  summary(nn)
+  bench.time <- ceiling(10*difftime(tend,t0,units = 'mins'))/10
+  print(bench.time)
+  
+  bench.neuralnet.preds <- compute(nn, bench.neuralnet.test[, 1:nbvar])
+  bench.neuralnet.preds.res <- bench.neuralnet.preds$net.result
+  # head(bench.neuralnet.preds.res)
+  
+  original_values <- max.col(bench.neuralnet.test[, (nbvar+1):(nbvar+nb.factor)])
+  bench.neuralnet.preds.res.class <- max.col(bench.neuralnet.preds.res)
+  bench.neuralnet.acc <- mean(bench.neuralnet.preds.res.class == original_values)*100
+  bench.neuralnet_classifier.accuracy <- sprintf("[%s] nlevels = %d, size hidden = %d, var = %d, lines = %d, Accuracy = %0.2f %%, time = %smin (glmnet: %s)", 
+                                                 param.mutate.subcat.cat, 
+                                                 nb.factor,
+                                                 param.size_hidden,
+                                                 nbvar,
+                                                 nblines,
+                                                 bench.neuralnet.acc,
+                                                 bench.time, 
+                                                 bench.glmnet_classifier.accuracy)
+  print(bench.neuralnet_classifier.accuracy) 
+  
+  
+}
+
 
 # --------------- SVM e1071, KO memory et predict
 
@@ -756,52 +863,6 @@ if(param.pca)
 # # bench.svm <- e1071::svm(category ~ ., data = dt.bench.dtm_train.tfidf)
 # 
 
-# --------------- SVM liquidSVM, KO data
-
-## - http://www.isa.uni-stuttgart.de/software/R/demo.html
-
-# library(liquidSVM)
-
-# KO no data
-# model <- liquidSVM::mcSVM(x = as.matrix(bench.dtm_train.tfidf),
-#                y = as.vector(bench.train[['category']]),
-#                mc_type="AvA_hinge"
-#                # useCells=TRUE,threads=3
-# )
-
-# dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), as.vector(bench.train[['category']])))
-# colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
-
-# bench.svm <- liquidSVM::svm(category ~ ., dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
-# colnames(dt.bench.dtm_train.tfidf) <- paste0('`',colnames(dt.bench.dtm_train.tfidf),'`')
-# bench.svm <- liquidSVM::svm(category ~ ., dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
-# f <- paste("category ~", paste(sprintf("`%s`", colnames(dt.bench.dtm_train.tfidf)), collapse="+"))
-# bench.svm <- liquidSVM::svm(formula(f), dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
-
-# KO aussi
-# bench.svm <- svm(x = dt.bench.dtm_train.tfidf[-dim(dt.bench.dtm_train.tfidf)[2]], 
-#                  y =  dt.bench.dtm_train.tfidf[dim(dt.bench.dtm_train.tfidf)[2]])
-
-# KO aussi
-# model <- mcSVM(formula(f), dt.bench.dtm_train.tfidf,
-#                mc_type="AvA_hinge",
-#                useCells=TRUE, threads=3
-#                )
-
-
-
-# 
-# # To create a sparse matrix you can do this:
-# #   
-# #   library(Matrix)
-# # library(SpareM)
-# # sMatrix <- Matrix(data=as.matrix(trainData), sparse=TRUE)
-# # Then you can use that on your svm model
-# # 
-# # svm.model <- svm(trainData[,"Target"] ~., data=sMatrix, kernel="linear")
-# # To predict you should make sure your train data has the correct format and then you can use:
-# #   
-# #   predicted <- predict(svm.model, testData)
 
 # --------------- NNET KO Memory
 
@@ -859,4 +920,60 @@ if(param.pca)
 # bench.pcanet.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != pcanet.preds.2]))/dim(bench.test)[[1]])
 # 
 # print(bench.pcanet.accuracy) # "Accuracy : 74.77 %"
+
+
+
+
+# --------------- SVM liquidSVM, KO : pas reussi a l'utiliser, pb avec data
+
+## - http://www.isa.uni-stuttgart.de/software/R/demo.html
+
+# library(liquidSVM)
+
+# KO no data
+# model <- liquidSVM::mcSVM(x = as.matrix(bench.dtm_train.tfidf),
+#                y = as.vector(bench.train[['category']]),
+#                mc_type="AvA_hinge"
+#                # useCells=TRUE,threads=3
+# )
+
+# dt.bench.dtm_train.tfidf <- as.data.frame(cbind(as.matrix(bench.dtm_train.tfidf), as.vector(bench.train[['category']])))
+# colnames(dt.bench.dtm_train.tfidf)[dim(dt.bench.dtm_train.tfidf)[2]] <- 'category'
+
+# bench.svm <- liquidSVM::svm(category ~ ., dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
+# colnames(dt.bench.dtm_train.tfidf) <- paste0('`',colnames(dt.bench.dtm_train.tfidf),'`')
+# bench.svm <- liquidSVM::svm(category ~ ., dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
+# f <- paste("category ~", paste(sprintf("`%s`", colnames(dt.bench.dtm_train.tfidf)), collapse="+"))
+# bench.svm <- liquidSVM::svm(formula(f), dt.bench.dtm_train.tfidf, useCells=TRUE) # KO error
+
+# KO aussi
+# bench.svm <- svm(x = dt.bench.dtm_train.tfidf[-dim(dt.bench.dtm_train.tfidf)[2]], 
+#                  y =  dt.bench.dtm_train.tfidf[dim(dt.bench.dtm_train.tfidf)[2]])
+
+# KO aussi
+# model <- mcSVM(formula(f), dt.bench.dtm_train.tfidf,
+#                mc_type="AvA_hinge",
+#                useCells=TRUE, threads=3
+#                )
+
+
+
+# 
+# # To create a sparse matrix you can do this:
+# #   
+# #   library(Matrix)
+# # library(SpareM)
+# # sMatrix <- Matrix(data=as.matrix(trainData), sparse=TRUE)
+# # Then you can use that on your svm model
+# # 
+# # svm.model <- svm(trainData[,"Target"] ~., data=sMatrix, kernel="linear")
+# # To predict you should make sure your train data has the correct format and then you can use:
+# #   
+# #   predicted <- predict(svm.model, testData)
+
+## - http://www.quantide.com/multilabel-classification-neuralnet-package/
+## - https://www.r-bloggers.com/multilabel-classification-with-neuralnet-package/
+## - https://gist.github.com/mick001/5973654a443a79b5d1b911a22c00e487
+
+
 
