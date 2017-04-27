@@ -16,9 +16,11 @@
   # library(textstem)
 }
 
-# LOAD DATA ---------------------------------------------------------------
 {
+  # LOAD DATA ---------------------------------------------------------------
   {
+    library(tm)
+    
     param.dataorg.file <- 'data/physorg.RData'
     param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.stemmatized.RData'
     
@@ -63,6 +65,8 @@
       load(param.clean_content.file)
     }
     
+    d.art.c.bench[, content := removeWords(content, c('can','say'))]
+      
     protected.obj <- c("protected.obj", "bench.models", "d.art.c.bench")
     rm(list = setdiff(ls(), protected.obj))
     param.cleaninloop = c('d.bench', 'd.art.c.bench')
@@ -78,20 +82,23 @@
     ## -- PIPLINE --
     param.doprune = TRUE
     param.dostem = FALSE
-    param.dongram = FALSE
+    param.dongram = TRUE
     param.dofeaturehashing = FALSE # incompatible avec prune
     
     ## -- CAT / SUB CAT --
-    param.mutate.subcat = TRUE
+    param.mutate.subcat.as.cat = TRUE
+    
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-    param.mutate.subcat.cat <- c('Nanotechnology')
+    
+    param.mutate.subcat.cat <- c('Health')
+    
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                       'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                       'Materials Science')
     
     ## -- PCT USED DATA 
-    param.pctdata.default = 0.4
+    param.pctdata.default = 1
     param.startmodel.pctdata = 1
     param.maxmodel.pctdata = 1
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
@@ -126,7 +133,9 @@
     param.bench.xgboost = FALSE
     param.bench.svmk = FALSE
     param.pca = FALSE
-    param.neuralnet = TRUE
+    param.neuralnet = FALSE
+    
+    param.lda = TRUE
   }
   
   
@@ -198,7 +207,7 @@
       bench.models <- list()
     }
     
-    if(param.mutate.subcat) {   
+    if(param.mutate.subcat.as.cat) {   
       param.cat <- param.mutate.subcat.cat
     }
     
@@ -215,7 +224,7 @@
     ## TODO enlever la valeur 1  trouver un meilleur moyen
     param.maxmodel.prune = min(c(length(param.prune.inc[[1]]), param.startmodel.prune + param.maxmodel.prune - 1))
     
-    if(param.mutate.subcat) {
+    if(param.mutate.subcat.as.cat) {
       d.art.c.bench.allcat <- d.art.c.bench
     }
   }
@@ -225,10 +234,10 @@
   # START BENCH -------------------------------------------------------------
   
   
-  for (i_cat in 1:ifelse(!param.mutate.subcat,1,length(param.cat))) 
+  for (i_cat in 1:ifelse(!param.mutate.subcat.as.cat,1,length(param.cat))) 
   {
     
-    if(param.mutate.subcat) {
+    if(param.mutate.subcat.as.cat) {
       d.art.c.bench <- d.art.c.bench.allcat %>%
         filter(category == param.cat[i_cat]) %>%
         select(-category) %>%
@@ -369,6 +378,7 @@
             bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
           ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
         }
+        
         
         gc()
         for(i_nfold in param.startmodel.cv.nfold:param.maxmodel.cv.nfold)
@@ -516,6 +526,77 @@
 #   [1] "Model 121 saved (1.3 min): pct data=1, dim_train=(20947, 6084), Accuracy : 74.36 %"
 #   Time difference of 1.649866 mins
 #   
+
+## --------------- LDA ---------------
+
+if(param.lda) 
+{
+  
+  cat('\n','------------------------------------')
+  cat('\n','Latent Dirichlet Allocation :\n')
+  
+  library(LDAvis)
+  
+  param.reglda = FALSE
+  param.multi_factor = 1
+  
+  bench.lda.dtm_train = create_dtm(bench.it_train, bench.vectorizer, type = "lda_c")
+  
+  bench.lda.model = LDA$new(n_topics = nlevels(bench.train$category) * param.multi_factor, 
+                            # doc_topic_prior = 0.1, topic_word_prior = 0.01
+                            vocabulary = bench.train.vocab.stem)
+  
+  bench.lda.doc_topic_distr.train = bench.lda.model$fit_transform(bench.lda.dtm_train, 
+                                                                  n_iter = 1000, 
+                                                                  convergence_tol = 0.0001,
+                                                                  check_convergence_every_n = 10)
+  
+  bench.lda.model$plot()
+  
+  
+  gc()
+  
+  ## - N'apporte rien à la regression
+  if(param.reglda)
+  {
+    
+    bench.lda.doc_topic_distr.test = bench.lda.model$fit_transform(bench.lda.dtm_test, 
+                                                                   n_iter = 1000, 
+                                                                   convergence_tol = 0.0001,
+                                                                   check_convergence_every_n = 10)
+    
+    bench.lda.dtm_test = create_dtm(bench.it_test, bench.vectorizer, type = "lda_c")
+    bench.lda.dtm_train.tfidf <- cbind(bench.dtm_train.tfidf, scale(bench.lda.doc_topic_distr.train))
+    bench.lda.dtm_test.tfidf <- cbind(bench.dtm_test.tfidf, scale(bench.lda.doc_topic_distr.test))
+    
+    bench.lda.glmnet_classifier.time <- system.time(
+      bench.lda.glmnet_classifier <- cv.glmnet(x = bench.lda.dtm_train.tfidf, y = bench.train[['category']],
+                                               # family = 'binomial',
+                                               family = 'multinomial',
+                                               type.multinomial="grouped",
+                                               # L1 penalty
+                                               alpha = 1,
+                                               # ROC curve
+                                               type.measure = "auc",
+                                               nfolds = param.bench.glmnet.NFOLDS,
+                                               thresh = param.bench.glmnet.THRESH,
+                                               maxit = param.bench.glmnet.MAXIT,
+                                               parallel = TRUE)
+      
+    ); print(sprintf('bench.glmnet_classifier.tfidf.time: %0.2fm', bench.lda.glmnet_classifier.time[[3]]/60))
+    
+    plot(bench.lda.glmnet_classifier)
+    
+    bench.lda.preds.class.time <- system.time(
+      bench.test$bench.preds.class <-  predict(bench.lda.glmnet_classifier, bench.lda.dtm_test.tfidf, s = "lambda.min", type = 'class')
+    ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
+    
+    bench.lda.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]])
+    print(bench.lda.glmnet_classifier.accuracy)
+  }
+}
+
+
 ## --------------- Autres models possibles --------------- 
 
 
@@ -788,12 +869,12 @@ if(param.neuralnet)
   library(nnet)
   
   t0 <- Sys.time()
-
+  
   #levels(bench.test[['category']])  
   res.factor <- levels(bench.test[['category']]) 
   nb.factor <- length(res.factor)
   
-  param.size_hidden <- 20
+  param.size_hidden <- 5
   param.threshold <- 0.05
   
   nbvar <- dim(as.matrix(bench.dtm_train.tfidf))[[2]]
@@ -821,7 +902,7 @@ if(param.neuralnet)
   
   nn <- neuralnet(f,
                   data = bench.neuralnet.train,
-                  hidden = c(nbvar,param.size_hidden,nb.factor),
+                  hidden = c(nbvar,param.size_hidden, 5, nb.factor),
                   act.fct = "logistic",
                   threshold = param.threshold, # default = 0.01
                   linear.output = FALSE,
@@ -848,7 +929,7 @@ if(param.neuralnet)
                                                  bench.neuralnet.acc,
                                                  bench.time, 
                                                  bench.glmnet_classifier.accuracy
-                                                 )
+  )
   print(bench.neuralnet_classifier.accuracy) 
   
   
@@ -880,6 +961,11 @@ if(param.neuralnet)
 # # Error: cannot allocate vector of size 50.0 Gb
 # nnet_model <- nnet(category ~ ., data = dt.bench.dtm_train.tfidf, size = 2)
 
+# ## a tester : softmax : 
+# ## -- http://stackoverflow.com/questions/19862478/classification-in-r-neuralnet
+# idC <-class.ind(Train$y)
+# NN1=nnet(Train, idC[Train], size=15, maxit = 200, softmax=TRUE)
+# predict(NN1, data=Test,type = "class")
 
 # --------------- caret nn KO : There were missing values in resampled performance measures
 ## -- https://stats.stackexchange.com/questions/21717/how-to-train-and-validate-a-neural-network-model-in-r
@@ -966,7 +1052,7 @@ if(param.neuralnet)
 #                useCells=TRUE, threads=3
 #                )
 
-
+## --------- Autres sav
 
 # 
 # # To create a sparse matrix you can do this:
