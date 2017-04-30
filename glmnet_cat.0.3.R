@@ -1,3 +1,5 @@
+####################################################
+## Script created by Sébastien Desfossés (2017/04)
 
 #setwd("~/Dev/R - Phys.org")
 
@@ -65,7 +67,7 @@
       load(param.clean_content.file)
     }
     
-    d.art.c.bench[, content := removeWords(content, c('can','say'))]
+    d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
       
     protected.obj <- c("protected.obj", "bench.models", "d.art.c.bench")
     rm(list = setdiff(ls(), protected.obj))
@@ -82,7 +84,7 @@
     ## -- PIPLINE --
     param.doprune = TRUE
     param.dostem = FALSE
-    param.dongram = TRUE
+    param.dongram = 2L
     param.dofeaturehashing = FALSE # incompatible avec prune
     
     ## -- CAT / SUB CAT --
@@ -90,7 +92,7 @@
     
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     
-    param.mutate.subcat.cat <- c('Health')
+    param.mutate.subcat.cat <- c('Other Sciences')
     
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -539,17 +541,28 @@ if(param.lda)
   
   param.reglda = FALSE
   param.multi_factor = 1
+  # param.doc_topic_prior = 0.1
+  # param.topic_word_prior = 0.01
   
   bench.lda.dtm_train = create_dtm(bench.it_train, bench.vectorizer, type = "lda_c")
   
   bench.lda.model = LDA$new(n_topics = nlevels(bench.train$category) * param.multi_factor, 
-                            # doc_topic_prior = 0.1, topic_word_prior = 0.01
+                            # param.doc_topic_prior = 0.1, param.topic_word_prior = 0.01
                             vocabulary = bench.train.vocab.stem)
   
   bench.lda.doc_topic_distr.train = bench.lda.model$fit_transform(bench.lda.dtm_train, 
                                                                   n_iter = 1000, 
                                                                   convergence_tol = 0.0001,
                                                                   check_convergence_every_n = 10)
+  
+  ## - topic probability table from text2vec LDA
+  
+  bench.lda.doc_topic_prob = normalize(bench.lda.doc_topic_distr.train, norm = "l1")
+  # or add norm first and normalize :
+  # bench.lda.doc_topic_prob = normalize(bench.lda.doc_topic_distr.train + doc_topic_prior, norm = "l1")
+  
+  # word_topic_counts = lda_model$get_word_vectors() 
+  # topic_word_distr = t(word_topic_counts + topic_word_prior) %>% normalize('l1')
   
   bench.lda.model$plot()
   
@@ -566,6 +579,7 @@ if(param.lda)
                                                                    check_convergence_every_n = 10)
     
     bench.lda.dtm_test = create_dtm(bench.it_test, bench.vectorizer, type = "lda_c")
+    # scale ou pas ?
     bench.lda.dtm_train.tfidf <- cbind(bench.dtm_train.tfidf, scale(bench.lda.doc_topic_distr.train))
     bench.lda.dtm_test.tfidf <- cbind(bench.dtm_test.tfidf, scale(bench.lda.doc_topic_distr.test))
     
