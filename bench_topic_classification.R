@@ -1,7 +1,7 @@
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-setwd("~/Dev/Git/R - Phys.org")
+# setwd("~/Dev/Git/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -92,13 +92,13 @@ setwd("~/Dev/Git/R - Phys.org")
   # PARAMS ------------------------------------------------------------------
   {
     ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 3
+    param.doparall.worker = 7
     
     ## -- PIPLINE --
-    param.dotfidf = FALSE
+    param.dotfidf = TRUE
     param.doprune = TRUE
     param.dostem = FALSE
-    param.dongram = FALSE
+    param.dongram = TRUE
     param.dofeaturehashing = FALSE # incompatible avec prune
     
     ## -- CAT / SUB CAT --
@@ -106,7 +106,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     
-    param.mutate.subcat.cat <- c('Nanotechnology')
+    param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -122,9 +122,9 @@ setwd("~/Dev/Git/R - Phys.org")
     
     ## -- MAX DATA
     param.nblines_max.default = 500
-    param.startmodel.nblines_max = 1
-    param.maxmodel.nblines_max = 1
-    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(800),log(5000), length.out = 20))))
+    param.startmodel.nblines_max = 2
+    param.maxmodel.nblines_max = 100
+    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(800),log(5000), length.out = 10))))
     
     param.train_test <- 0.7
     
@@ -137,7 +137,7 @@ setwd("~/Dev/Git/R - Phys.org")
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 10 # 80 # 40 # (default pkg 1)
+    param.prune.term_count_min.default = 80 # 80 # 40 # (default pkg 1)
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
@@ -179,13 +179,19 @@ setwd("~/Dev/Git/R - Phys.org")
   # FUNCTIONS  -------------------------------------------------------------------
   {
     ## TODO
+    num_sav <- 0
     save_results <- function()
     {
       id <- dim(bench.results)[[1]] + 1
-      bench.results[id, "Id"] <<- id
+      date.sav <- Sys.time()
+      
       bench.results[id, "Session"] <<- sessioin_id
+      bench.results[id, "Id"] <<- sprintf("%s-%s", sessioin_id, num_sav)
+      bench.results[id, "Num"] <<- num_sav
+      bench.results[id, "Timestamp"] <<- date.sav
       
       bench.results[id, "Computer"] <<- Sys.info()[[4]] 
+      bench.results[id, "Worker"] <<- param.doparall.worker
       bench.results[id, "Issc"] <<- param.mutate.subcat.as.cat
       
       bench.results[id, "Category"] <<- param.cat[i_cat]
@@ -196,7 +202,7 @@ setwd("~/Dev/Git/R - Phys.org")
       
       bench.results[id, "Train_lines"] <<- dim(bench.dtm_train)[[1]]
       bench.results[id, "Train_vars"] <<- dim(bench.dtm_train)[[2]]
-      bench.results[id, "Sample_lines"] <<- param.num_sample
+      bench.results[id, "Sample_lines"] <<- bench.num_sample
       bench.results[id, "Ratio_TT"] <<- param.train_test
       
       bench.results[id, "LEMM"] <<- param.lemmatized
@@ -233,6 +239,8 @@ setwd("~/Dev/Git/R - Phys.org")
         bench.results[id, "PCA_net"] <<- param.pca.alpha.eleastic.net
         bench.results[id, "PCA_varexp"] <<- param.pca.pct_varexp
       }
+      
+      num_sav <<- num_sav + 1
     }
     
     save_model <- function(model_name) 
@@ -336,7 +344,7 @@ setwd("~/Dev/Git/R - Phys.org")
   
   
   # START BENCH -------------------------------------------------------------
-  sessioin_id <- Sys.time()
+  sessioin_id <- ceiling(10 * as.numeric(Sys.time()))
   i_cat = 1
   for (i_cat in 1:ifelse(!param.mutate.subcat.as.cat,1,length(param.cat))) 
   {
