@@ -38,12 +38,12 @@ setwd("~/Dev/Git/R - Phys.org")
     if(!file.exists(param.clean_content.file)) {
       
       load(param.dataorg.file)
-      d.art$content.org <- d.art$content
       
       # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
       
       d.art.sc.clean.time <- system.time(
         d.art.c.bench <- d.art %>%
+          mutate(content.org = content) %>%
           select(url, content, content.org, category, subcategory) %>%
           # suppression des ' qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
