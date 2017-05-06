@@ -21,10 +21,10 @@ setwd("~/Dev/Git/R - Phys.org")
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    suppressWarnings(suppressMessages(library(tm)))
     
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
+    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
     param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
@@ -36,15 +36,26 @@ setwd("~/Dev/Git/R - Phys.org")
     }
     
     if(!file.exists(param.clean_content.file)) {
-      
+      suppressWarnings(suppressMessages(library(tm)))
       load(param.dataorg.file)
       
       # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
+
+      d.art <- d.art %>% 
+        rowwise() %>%
+        mutate(content = ifelse(is.na(summary),
+                                content,
+                                ifelse(grepl(substr(summary,5,nchar(summary) - 5), content, fixed = TRUE, useBytes = TRUE),
+                                       content,
+                                       paste(summary, content)
+                                       )
+                                )
+               ) %>% setDT
       
       d.art.sc.clean.time <- system.time(
         d.art.c.bench <- d.art %>%
+          select(url, content, category, subcategory) %>%
           mutate(content.org = content) %>%
-          select(url, content, content.org, category, subcategory) %>%
           # suppression des ' qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
           # suppression des - qui ne sont pas dans des mots
@@ -631,7 +642,7 @@ setwd("~/Dev/Git/R - Phys.org")
               cat(mode_desc,'\n')
               
               # library("recommenderlab")
-              # bench.dtm_train.dist = dist2(bench.dtm_train)
+              ## bench.dtm_train.dist = dist2(bench.dtm_train)
               # bench.dtm_train.sim = sim2(bench.dtm_train)
               # bench.dt_train <- as.data.table(as.matrix(bench.dtm_train))
               # bench.dt_train.sim <- as.data.table(as.matrix(bench.dtm_train.sim))
