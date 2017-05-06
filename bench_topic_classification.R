@@ -3,8 +3,7 @@
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-# setwd("~/Dev/Git/R - Phys.org")
-# setwd("E:/Dev/Git/R - Phys.org")
+setwd("~/Dev/Git/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -24,7 +23,6 @@
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    suppressWarnings(suppressMessages(library(tm)))
     
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
@@ -40,15 +38,26 @@
     }
     
     if(!file.exists(param.clean_content.file)) {
-      
+      suppressWarnings(suppressMessages(library(tm)))
       load(param.dataorg.file)
-      d.art$content.org <- d.art$content
       
       # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
+
+      d.art <- d.art %>% 
+        rowwise() %>%
+        mutate(content = ifelse(is.na(summary),
+                                content,
+                                ifelse(grepl(substr(summary,5,nchar(summary) - 5), content, fixed = TRUE, useBytes = TRUE),
+                                       content,
+                                       paste(summary, content)
+                                       )
+                                )
+               ) %>% setDT
       
       d.art.sc.clean.time <- system.time(
         d.art.c.bench <- d.art %>%
-          select(url, content, content.org, category, subcategory) %>%
+          select(url, content, category, subcategory) %>%
+          mutate(content.org = content) %>%
           # suppression des ' qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
           # suppression des - qui ne sont pas dans des mots
@@ -169,7 +178,7 @@
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 80 # 80 # 40 # (default pkg 1)
+    param.prune.term_count_min.default = 10 # 80 # 40 # (default pkg 1)
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
@@ -185,7 +194,7 @@
     
     param.bench.glmnet = FALSE
     param.bench.naivebayes = FALSE
-    param.bench.xgboost = FALSE
+    param.bench.xgboost = TRUE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -218,6 +227,16 @@
         labs(x = 'Articles', y = 'Accuracy')
       
       ggplot(data = res) +
+        aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        labs(x = 'Articles', y = 'Minutes')
+      
+      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+        aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
+        geom_point() + geom_smooth(span = 0.9, se = FALSE) +
+        labs(x = 'Articles', y = 'Accuracy')
+      
+      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
         aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
@@ -634,7 +653,7 @@
               cat(model_desc,'\n')
               
               # library("recommenderlab")
-              # bench.dtm_train.dist = dist2(bench.dtm_train)
+              ## bench.dtm_train.dist = dist2(bench.dtm_train)
               # bench.dtm_train.sim = sim2(bench.dtm_train)
               # bench.dt_train <- as.data.table(as.matrix(bench.dtm_train))
               # bench.dt_train.sim <- as.data.table(as.matrix(bench.dtm_train.sim))
