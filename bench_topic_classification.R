@@ -27,6 +27,7 @@
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
     param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
+    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
     
@@ -811,6 +812,29 @@
             print(difftime(tend, t0, units = 'mins'))
           }
           
+          if(param.randomForest) {
+            cat('\n','------------------------------------')
+            cat('\n','Randomforest :\n')
+            suppressWarnings(suppressMessages(library(randomForest)))
+            
+            gc()
+            t0 <- Sys.time()
+            res.model <- 'xgboost'
+            
+            domForest_classifier <- randomForest(
+              x = as.matrix(bench.dtm_train), 
+              y = bench.train[['category']],
+              importance = TRUE,
+              ntree = 500)
+            
+            bench.randomforest.preds  <- predict(bench.randomForest_classifier, as.matrix(bench.dtm_test))
+            bench.test$bench.randomForest_classifier.class <- bench.randomforest.preds
+            
+            tend <- Sys.time()
+            res.time <- difftime(tend, t0, units = 'secs')
+            
+            res.confmat <- confusionMatrix(bench.test$bench.randomForest_classifier.class, bench.test$category)
+          }
           
           # --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
           # param.mutate.subcat.cat <- c('Physics')
