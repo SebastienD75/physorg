@@ -1,7 +1,7 @@
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-# setwd("~/Dev/Git/R - Phys.org")
+setwd("~/Dev/Git/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -81,7 +81,6 @@
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
     
-    ## TODO 
     protected.obj <- c("protected.obj", "bench.models", "bench.results", "d.art.c.bench", 'param.lemmatized')
     rm(list = setdiff(ls(), protected.obj))
     param.cleaninloop = c('d.bench', 'd.art.c.bench')
@@ -92,14 +91,14 @@
   # PARAMS ------------------------------------------------------------------
   {
     ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 7
+    param.doparall.worker = 3
     
     ## -- PIPLINE --
     param.dotfidf = TRUE
-    param.doprune = TRUE
     param.dostem = FALSE
-    param.dongram = TRUE
+    param.dongram = FALSE
     param.dofeaturehashing = FALSE # incompatible avec prune
+    param.doprune = TRUE
     
     ## -- CAT / SUB CAT --
     param.mutate.subcat.as.cat = TRUE
@@ -124,7 +123,7 @@
     param.nblines_max.default = 500
     param.startmodel.nblines_max = 2
     param.maxmodel.nblines_max = 100
-    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(800),log(5000), length.out = 10))))
+    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(2500),log(25000), length.out = 30))))
     
     param.train_test <- 0.7
     
@@ -137,7 +136,7 @@
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 80 # 80 # 40 # (default pkg 1)
+    param.prune.term_count_min.default = 10 # 80 # 40 # (default pkg 1)
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
@@ -152,11 +151,11 @@
     param.seed = 20170416
     
     param.bench.glmnet = TRUE
-    param.bench.naivebayes = TRUE
+    param.bench.naivebayes = FALSE
     param.bench.xgboost = TRUE
-    param.bench.svmk = TRUE
-    param.bench.nnet.multinom = TRUE
-    param.bench.pcaNNet = TRUE
+    param.bench.svmk = FALSE
+    param.bench.nnet.multinom = FALSE
+    param.bench.pcaNNet = FALSE
     param.bench.neuralnet = FALSE
     
     param.bench.pcaNNet.thresh = 0.99
@@ -168,7 +167,7 @@
     param.pca = TRUE
     param.pca.alpha.eleastic.net = 0.5
     param.pca.pct_varexp = 99
-    param.pca.bench.glmnet = TRUE
+    param.pca.bench.glmnet = FALSE
     param.pca.bench.nnet.multinom = TRUE
     param.pca.bench.neuralnet = FALSE
     
@@ -178,7 +177,36 @@
   
   # FUNCTIONS  -------------------------------------------------------------------
   {
-    ## TODO
+    plotresults <- function(res = bench.results)
+    {
+      ggplot(data = res) +
+        aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        labs(x = 'Articles', y = 'Accuracy')
+      
+      ggplot(data = res) +
+        aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        labs(x = 'Articles', y = 'Minutes')
+      
+      rm(list = setdiff(ls(), c('bench.results')))
+      
+      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+        aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
+        geom_point() + geom_smooth(span = 0.9, se = FALSE) +
+        labs(x = 'Articles', y = 'Accuracy')
+      
+      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+        aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        labs(x = 'Articles', y = 'Minutes')
+      
+      # bench.results %>% filter(Accuracy > 35, Time < 25*60, Model != 'pcaNNet') %>% ggplot() +
+      #   aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+      #   geom_line() +
+      #   labs(x = 'Articles', y = 'Minutes')
+    }
+    
     num_sav <- 0
     save_results <- function()
     {
@@ -313,7 +341,6 @@
       bench.models <- list()
     }
     
-    ## SDE TODO
     if(!exists('bench.results')) {
       bench.results <- data.frame()
     }
