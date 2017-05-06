@@ -1,3 +1,5 @@
+# save(list = c('bench.results'), file = 'data/results_bench_allmodels_nblines_500_2000.RData')
+
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
@@ -26,6 +28,7 @@
     
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
+    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
     param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
@@ -121,12 +124,12 @@
   # PARAMS ------------------------------------------------------------------
   {
     ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 3
+    param.doparall.worker = 7
     
     ## -- PIPLINE --
     param.dotfidf = TRUE
     param.dostem = FALSE
-    param.dongram = FALSE
+    param.dongram = TRUE
     param.dofeaturehashing = FALSE # incompatible avec prune
     param.doprune = TRUE
     
@@ -150,10 +153,10 @@
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
     
     ## -- MAX DATA
-    param.nblines_max.default = 500^10
+    param.nblines_max.default = 1000^10
     param.startmodel.nblines_max = 1
     param.maxmodel.nblines_max = 1
-    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(2500),log(25000), length.out = 30))))
+    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
     
     param.train_test <- 0.7
     
@@ -180,7 +183,7 @@
     param.hngram = 2 ** 18
     param.seed = 20170416
     
-    param.bench.glmnet = TRUE
+    param.bench.glmnet = FALSE
     param.bench.naivebayes = FALSE
     param.bench.xgboost = FALSE
     param.bench.svmk = FALSE
@@ -197,9 +200,9 @@
     param.pca = FALSE
     param.pca.alpha.eleastic.net = 0.5
     param.pca.pct_varexp = 99
-    param.pca.bench.glmnet = FALSE
+    param.pca.bench.glmnet = TRUE
     param.pca.bench.nnet.multinom = TRUE
-    param.pca.bench.neuralnet = FALSE
+    param.pca.bench.neuralnet = TRUE
     
     param.lda = FALSE
   }
@@ -221,15 +224,27 @@
       
       # rm(list = setdiff(ls(), c('bench.results')))
       
-      # bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
-      #   aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
-      #   geom_point() + geom_smooth(span = 0.9, se = FALSE) +
-      #   labs(x = 'Articles', y = 'Accuracy')
+      bench.results %>% ggplot() +
+        aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
+        geom_point() + geom_smooth(span = 0.9, se = FALSE) +
+        labs(x = 'Articles', y = 'F1')
       
-      # bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
-      #   aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
-      #   geom_line() +
-      #   labs(x = 'Articles', y = 'Minutes')
+      
+      bench.results %>% filter(Model != 'pca.neuralnet', Model != 'pcaNNet', Model != 'pca.multinom')  %>% ggplot() +
+        aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
+        geom_point() + geom_smooth(span = 0.9, se = FALSE) +
+        labs(x = 'Articles', y = 'F1')
+      
+      
+      bench.results %>% ggplot() +
+        aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        labs(x = 'Articles', y = 'Minutes')
+
+      bench.results %>% filter(Model != 'pca.neuralnet', Model != 'pcaNNet', Model != 'pca.multinom') %>% ggplot() +
+        aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        labs(x = 'Articles', y = 'Minutes')
       
       # bench.results %>% filter(Accuracy > 35, Time < 25*60, Model != 'pcaNNet') %>% ggplot() +
       #   aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
@@ -254,7 +269,21 @@
       
       bench.results[id, "Category"] <<- param.cat[i_cat]
       
-      bench.results[id, "Accuracy"] <<- res.accuracy
+      # cm$byClass
+      bench.results[id, "Accuracy"] <<- res.confmat$overall[['Accuracy']]
+      bench.results[id, "AccuracyPValue"] <<- res.confmat$overall[['AccuracyPValue']]
+      bench.results[id, "Balanced Accuracy"] <<- mean(res.confmat$byClass[,'Balanced Accuracy'])
+      bench.results[id, "Precision"] <<- mean(res.confmat$byClass[,'Precision'])
+      bench.results[id, "Recall"] <<- mean(res.confmat$byClass[,'Recall'])
+      bench.results[id, "F1"] <<- mean(res.confmat$byClass[,'F1'])
+      idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1']))
+      bench.results[id, "Min F1 class"] <<- names(idx_minF1)
+      bench.results[id, "Min F1 val"] <<- res.confmat$byClass[idx_minF1,'F1']
+      idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1']))
+      bench.results[id, "Max F1 class"] <<- names(idx_maxF1)
+      bench.results[id, "Max F1 val"] <<- res.confmat$byClass[idx_maxF1,'F1']
+        
+      # bench.results[id, "Accuracy"] <<- res.accuracy
       bench.results[id, "Time"] <<- res.time
       bench.results[id, "Model"] <<- res.model
       
@@ -315,25 +344,8 @@
       
       bench.models[[model_name]]$model_name <<- model_name
       bench.models[[model_name]]$model_num <<- model_num
-      bench.models[[model_name]]$mode_desc <<- mode_desc
+      bench.models[[model_name]]$model_desc <<- model_desc
       
-      bench.models[[model_name]]$param.bench.glmnet.NFOLDS <<- param.bench.glmnet.NFOLDS
-      bench.models[[model_name]]$param.bench.glmnet.THRESH <<- param.bench.glmnet.THRESH
-      bench.models[[model_name]]$param.bench.glmnet.MAXIT <<- param.bench.glmnet.MAXIT
-      
-      
-      bench.models[[model_name]]$param.lemmatized <<- param.lemmatized
-      bench.models[[model_name]]$param.dotfidf <<- param.dotfidf
-      bench.models[[model_name]]$param.dostem <<- param.dostem
-      bench.models[[model_name]]$param.dofeaturehashing <<- param.dofeaturehashing
-      bench.models[[model_name]]$param.dongram <<- param.dongram
-      bench.models[[model_name]]$param.doprune <<- param.doprune
-      bench.models[[model_name]]$param.prune.term_count_min <<- param.prune.term_count_min
-      bench.models[[model_name]]$param.prune.doc_proportion_max <<- param.prune.doc_proportion_max
-      bench.models[[model_name]]$param.prune.doc_proportion_min <<- param.prune.doc_proportion_min
-      
-      bench.models[[model_name]]$param.num_sample <<- param.num_sample
-      bench.models[[model_name]]$param.train_test <<- param.train_test
       bench.models[[model_name]]$param.dorpsc <<- param.dorpsc
       
       bench.models[[model_name]]$bench.train_tokens.time <<- bench.train_tokens.time
@@ -350,7 +362,7 @@
     }
     
     print_model <- function(model) {
-      params <- c('model_name', 'model_num','param.num_sample','mode_desc','bench.dtm_train.dim', 'bench.glmnet_classifier.accuracy')
+      params <- c('model_name', 'model_num','param.num_sample','model_desc','bench.dtm_train.dim', 'bench.glmnet_classifier.accuracy')
       lapply(model, function(m) {
         lapply(params, function(p) {
           str <- paste0(p, ':', m[[p]])
@@ -606,7 +618,7 @@
               model_name <- paste0(as.character(i_nfold), as.character(length(bench.models) + 1), as.character(i_nfold))
               model_num <- as.numeric(model_name)
               
-              mode_desc <- sprintf('model %d - text2vect cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, stem=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
+              model_desc <- sprintf('model %d - text2vect cv.glmnet : glmnet.params = ALPHA:1, NFOLDS:%d, THRESH:%s, MAXIT:%s + featureh=%s, stem=%s, ngram=%s, prune=%s :  prune.params = countmin:%s, doc.prop.max:%s, doc.prop.min:%s', 
                                    model_num,
                                    param.bench.glmnet.NFOLDS,
                                    param.bench.glmnet.THRESH,
@@ -619,7 +631,7 @@
                                    param.prune.doc_proportion_max,
                                    param.prune.doc_proportion_min
               )
-              cat(mode_desc,'\n')
+              cat(model_desc,'\n')
               
               # library("recommenderlab")
               # bench.dtm_train.dist = dist2(bench.dtm_train)
@@ -635,7 +647,8 @@
               gc()
               bench.glmnet_classifier.time <- system.time(
                 bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train, y = bench.train[['category']], 
-                                                     # family = 'binomial',                              
+                                                     # family = 'binomial',
+                                                     # type.measure = 'deviance',
                                                      family = 'multinomial', 
                                                      type.multinomial="grouped", 
                                                      # L1 penalty
@@ -656,34 +669,29 @@
               ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
               
               tend <- Sys.time()
-              
-              cm <- confusionMatrix(bench.test$bench.preds.class, bench.test$category)
-              cm$byClass
-              
-              #?!
-              # prf(data.frame(bench.test$bench.preds.class,bench.test$category))
-              
               res.time <- difftime(tend, t0, units = 'secs') 
+              
+              res.confmat <- confusionMatrix(bench.test$bench.preds.class, bench.test$category)
               res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]]
               save_results()
               
               bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
               print(bench.glmnet_classifier.accuracy)
               
-              res <- bench.test %>%
-                mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-                group_by(category) %>%
-                # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
-                summarise(n = n(),
-                          pct = 100*n/dim(bench.test)[[1]],
-                          # words = sum(words),
-                          accurate = sum(accurate),
-                          accuracy = (100*accurate/n)) %>%
-                # select(category, n, pct, words, accuracy) %>%
-                select(category, n, pct, accuracy) %>%
-                arrange(-accuracy)
-              
-              print(res)
+              # res <- bench.test %>%
+              #   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
+              #   group_by(category) %>%
+              #   # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
+              #   summarise(n = n(),
+              #             pct = 100*n/dim(bench.test)[[1]],
+              #             # words = sum(words),
+              #             accurate = sum(accurate),
+              #             accuracy = (100*accurate/n)) %>%
+              #   # select(category, n, pct, words, accuracy) %>%
+              #   select(category, n, pct, accuracy) %>%
+              #   arrange(-accuracy)
+              # 
+              # print(res)
               
               save_model(model_name)
               
@@ -771,6 +779,8 @@
                 bench.test$bench.preds.class <-  predict(bench.lda.glmnet_classifier, bench.lda.dtm_test, s = "lambda.min", type = 'class')
               ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
               
+              
+              res.confmat <- confusionMatrix(bench.test$bench.preds.class, bench.test$category)
               res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]]
               bench.lda.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
               print(bench.lda.glmnet_classifier.accuracy)
@@ -802,6 +812,7 @@
             
             tend <- Sys.time()
             res.time <- difftime(tend, t0, units = 'secs') 
+            res.confmat <- confusionMatrix(bench.test$bench.naivebayes.preds.class, bench.test$category)
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.naivebayes.preds.class]))/dim(bench.test)[[1]]
             save_results()
             
@@ -872,6 +883,7 @@
             
             tend <- Sys.time()
             res.time <- difftime(tend, t0, units = 'secs')
+            res.confmat <- confusionMatrix(bench.test$bench.xgboost.preds, bench.test$category)
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.xgboost.preds]))/dim(bench.test)[[1]] 
             save_results()
             
@@ -938,6 +950,7 @@
             
             tend <- Sys.time()
             res.time <- difftime(tend, t0, units = 'secs')
+            res.confmat <- confusionMatrix(bench.test$ksvm.predict.class, bench.test$category)
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != ksvm.predict.class]))/dim(bench.test)[[1]]
             save_results()
             
@@ -1050,6 +1063,7 @@
               
               tend <- Sys.time()
               res.time <- difftime(tend, t0, units = 'secs')
+              res.confmat <- confusionMatrix(bench.test$bench.preds.class, bench.test$category)
               res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]]
               save_results()
               
@@ -1086,6 +1100,7 @@
               
               tend <- Sys.time()
               res.time <- difftime(tend, t0, units = 'secs')
+              res.confmat <- confusionMatrix(bench.test$nnet.preds.class, bench.test$category)
               res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != nnet.preds.class]))/dim(bench.test)[[1]]
               save_results()
               
@@ -1148,6 +1163,8 @@
               
               original_values <- max.col(bench.neuralnet.test[, (nbvar+1):(nbvar+nb.factor)])
               bench.neuralnet.preds.res.class <- max.col(bench.neuralnet.preds.res)
+              # confusionMatrix ?!
+              res.confmat <- confusionMatrix(bench.neuralnet.preds.res.class, original_values)
               bench.neuralnet.acc <- mean(bench.neuralnet.preds.res.class == original_values)*100
               
               
@@ -1175,7 +1192,6 @@
           }
           
           if(param.bench.pcaNNet) {
-            suppressWarnings(suppressMessages(library(caret)))
             
             cat('\n','------------------------------------')
             cat('\n','PCANET :\n')
@@ -1196,6 +1212,7 @@
             
             tend <- Sys.time()
             res.time <- difftime(tend, t0, units = 'secs')
+            res.confmat <- confusionMatrix(bench.test$bench.pcaNNet.preds, bench.test$category)
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.pcaNNet.preds]))/dim(bench.test)[[1]]
             save_results()
             
@@ -1227,6 +1244,7 @@
             
             tend <- Sys.time()
             res.time <- difftime(tend, t0, units = 'secs')
+            res.confmat <- confusionMatrix(bench.test$nnet.preds.class, bench.test$category)
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != nnet.preds.class]))/dim(bench.test)[[1]] 
             save_results()
             
@@ -1302,6 +1320,8 @@
             
             original_values <- max.col(bench.neuralnet.test[, (nbvar+1):(nbvar+nb.factor)])
             bench.neuralnet.preds.res.class <- max.col(bench.neuralnet.preds.res)
+            # confusionMatrix ?!
+            res.confmat <- confusionMatrix(bench.neuralnet.preds.res.class, original_values)
             bench.neuralnet.acc <- mean(bench.neuralnet.preds.res.class == original_values)*100
             
             
