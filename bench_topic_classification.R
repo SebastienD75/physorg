@@ -12,6 +12,9 @@ setwd("~/Dev/Git/R - Phys.org")
   suppressWarnings(suppressMessages(library(SnowballC)))
   suppressWarnings(suppressMessages(library(doParallel)))
   suppressWarnings(suppressMessages(library(text2vec)))
+  suppressWarnings(suppressMessages(library(caret)))
+  
+  # library (ROCR)
   # library(textstem)
 }
 
@@ -22,8 +25,9 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
+    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
+    full_subcat_sample_size <- 100
     
     if(param.lemmatized) {
       param.clean_content.file <- param.clean_lemmatized_content.file
@@ -34,11 +38,13 @@ setwd("~/Dev/Git/R - Phys.org")
     if(!file.exists(param.clean_content.file)) {
       
       load(param.dataorg.file)
-      rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
+      d.art$content.org <- d.art$content
+      
+      # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
       
       d.art.sc.clean.time <- system.time(
         d.art.c.bench <- d.art %>%
-          select(url, content, category, subcategory) %>%
+          select(url, content, content.org, category, subcategory) %>%
           # suppression des ' qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
           # suppression des - qui ne sont pas dans des mots
@@ -64,8 +70,30 @@ setwd("~/Dev/Git/R - Phys.org")
       )
       
       if(param.lemmatized) {
+        library(textstem)
+        d.art.c.bench$content.nolem <- d.art.c.bench$content
         d.art.c.bench$content <- d.art.c.bench$content %>%
           lemmatize_strings()
+      }
+      
+      d.user.actifs <- d.user[nbcom>2 & nbart>2]
+      d.com.user.actifs <- d.com[user %in% d.user.actifs$user]
+      # d.com.user.actifs %>% group_by(user) %>% summarise(mean_rank = mean(rank), comments = n(), wc = sum(wc_comment)) %>% arrange(-mean_rank, -comments, -wc)
+      # d.com.user.actifs %>% group_by(user) %>% summarise(comments = n(), mean_rank = mean(rank),  wc = sum(wc_comment)) %>% arrange(-comments)
+      d.art.com.user.actifs <- d.art.c.bench[url %in% d.com.user.actifs$url]
+      d.art.com.user.actifs$subcategory <- droplevels(d.art.com.user.actifs$subcategory)
+      
+      
+      # d.art.c.bench.org <- d.art.c.bench
+      # d.art.c.bench <- d.art.com.user.actifs
+      
+      dim(d.user[nbcom>2 & nbart>2])
+      d.art.c.bench.sample <- d.art.c.bench[0,]
+      
+      for(l in levels(d.art.c.bench$subcategory)) {
+        nb_lines_subcat <- min(full_subcat_sample_size, dim(d.art.c.bench[subcategory == l])[[1]])
+        sample_subcat <- sample_n(d.art.c.bench[subcategory == l], nb_lines_subcat)
+        d.art.c.bench.sample <- rbind(d.art.c.bench.sample, sample_subcat)
       }
       
       # d.art.sc.clean$id <- as.character(d.art.sc.clean$id)
@@ -81,9 +109,10 @@ setwd("~/Dev/Git/R - Phys.org")
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
     
-    protected.obj <- c("protected.obj", "bench.models", "bench.results", "d.art.c.bench", 'param.lemmatized')
+    completed.obj <- c('d.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
+    protected.obj <- c(completed.obj, "protected.obj", "bench.models", "bench.results", "d.art.c.bench", 'd.art.c.bench.url','param.lemmatized')
     rm(list = setdiff(ls(), protected.obj))
-    param.cleaninloop = c('d.bench', 'd.art.c.bench')
+    # param.cleaninloop = c('d.bench', 'd.art.c.bench')
     gc()
   }
   
@@ -105,7 +134,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     
-    param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+    param.mutate.subcat.cat <- c('Nanotechnology')
     
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -120,9 +149,9 @@ setwd("~/Dev/Git/R - Phys.org")
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
     
     ## -- MAX DATA
-    param.nblines_max.default = 500
-    param.startmodel.nblines_max = 2
-    param.maxmodel.nblines_max = 100
+    param.nblines_max.default = 500^10
+    param.startmodel.nblines_max = 1
+    param.maxmodel.nblines_max = 1
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(2500),log(25000), length.out = 30))))
     
     param.train_test <- 0.7
@@ -164,7 +193,7 @@ setwd("~/Dev/Git/R - Phys.org")
     param.bench.neuralnet.size_hidden <- 20
     param.bench.neuralnet.threshold <- 0.05
     
-    param.pca = TRUE
+    param.pca = FALSE
     param.pca.alpha.eleastic.net = 0.5
     param.pca.pct_varexp = 99
     param.pca.bench.glmnet = FALSE
@@ -189,8 +218,6 @@ setwd("~/Dev/Git/R - Phys.org")
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
       
-      rm(list = setdiff(ls(), c('bench.results')))
-      
       bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
         aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
         geom_point() + geom_smooth(span = 0.9, se = FALSE) +
@@ -200,6 +227,18 @@ setwd("~/Dev/Git/R - Phys.org")
         aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
+      
+      # rm(list = setdiff(ls(), c('bench.results')))
+      
+      # bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+      #   aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
+      #   geom_point() + geom_smooth(span = 0.9, se = FALSE) +
+      #   labs(x = 'Articles', y = 'Accuracy')
+      
+      # bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+      #   aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+      #   geom_line() +
+      #   labs(x = 'Articles', y = 'Minutes')
       
       # bench.results %>% filter(Accuracy > 35, Time < 25*60, Model != 'pcaNNet') %>% ggplot() +
       #   aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
@@ -373,8 +412,7 @@ setwd("~/Dev/Git/R - Phys.org")
   # START BENCH -------------------------------------------------------------
   sessioin_id <- ceiling(10 * as.numeric(Sys.time()))
   i_cat = 1
-  for (i_cat in 1:ifelse(!param.mutate.subcat.as.cat,1,length(param.cat))) 
-  {
+  for (i_cat in 1:ifelse(!param.mutate.subcat.as.cat,1,length(param.cat))) {
     
     if(param.mutate.subcat.as.cat) {
       d.art.c.bench <- d.art.c.bench.allcat %>%
@@ -408,7 +446,8 @@ setwd("~/Dev/Git/R - Phys.org")
         bench.train_ids = sample(bench.all_ids, param.num_sample)
         d.bench <- d.art.c.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT()
         
-        d.bench[,id := (.I)]
+        # SDE ?!
+        # d.bench[,id := (.I)]
         setkey(d.bench, id)
         
         bench.num_sample = ceiling(param.train_test * dim(d.bench)[[1]])
@@ -418,12 +457,12 @@ setwd("~/Dev/Git/R - Phys.org")
         bench.train = d.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
         bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
         
-        if(length(param.cleaninloop) != 0 && 
-           param.startmodel.pctdata == param.maxmodel.pctdata &&
-           param.startmodel.nblines_max == param.maxmodel.nblines_max
-           ) {
-          rm(list = param.cleaninloop)  
-        }
+        # if(length(param.cleaninloop) != 0 && 
+        #    param.startmodel.pctdata == param.maxmodel.pctdata &&
+        #    param.startmodel.nblines_max == param.maxmodel.nblines_max
+        #    ) {
+        #   rm(list = param.cleaninloop)
+        # }
         gc()
         
         print(paste("Train nb articles =", dim(bench.train)[[1]]))
@@ -559,7 +598,7 @@ setwd("~/Dev/Git/R - Phys.org")
             cat('\n','------------------------------------')
             cat('\n','cv.glmnet :\n')
             
-            suppressWarnings(suppressMessages(library(wordcloud)))
+            suppressWarnings(suppressMessages(library(wordcloud2)))
             suppressWarnings(suppressMessages(library(RColorBrewer)))
             
             gc()
@@ -591,6 +630,17 @@ setwd("~/Dev/Git/R - Phys.org")
               )
               cat(mode_desc,'\n')
               
+              # library("recommenderlab")
+              # bench.dtm_train.dist = dist2(bench.dtm_train)
+              # bench.dtm_train.sim = sim2(bench.dtm_train)
+              # bench.dt_train <- as.data.table(as.matrix(bench.dtm_train))
+              # bench.dt_train.sim <- as.data.table(as.matrix(bench.dtm_train.sim))
+              
+              # num_train_doc = 30
+              # id_doc = as.numeric(colnames(bench.dt_train.sim[,num_train_doc, with=FALSE]))
+              # d.art.c.bench[id == id_doc]$content
+              
+              
               gc()
               bench.glmnet_classifier.time <- system.time(
                 bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train, y = bench.train[['category']], 
@@ -615,6 +665,13 @@ setwd("~/Dev/Git/R - Phys.org")
               ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
               
               tend <- Sys.time()
+              
+              cm <- confusionMatrix(bench.test$bench.preds.class, bench.test$category)
+              cm$byClass
+              
+              #?!
+              # prf(data.frame(bench.test$bench.preds.class,bench.test$category))
+              
               res.time <- difftime(tend, t0, units = 'secs') 
               res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.preds.class]))/dim(bench.test)[[1]]
               save_results()
@@ -622,23 +679,23 @@ setwd("~/Dev/Git/R - Phys.org")
               bench.glmnet_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
               print(bench.glmnet_classifier.accuracy)
               
-              # res <- bench.test %>%
-              #   mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
-              #   group_by(category) %>%
-              #   # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
-              #   summarise(n = n(),
-              #             pct = 100*n/dim(bench.test)[[1]],
-              #             # words = sum(words),
-              #             accurate = sum(accurate),
-              #             accuracy = (100*accurate/n)) %>%
-              #   # select(category, n, pct, words, accuracy) %>%
-              #   select(category, n, pct, accuracy) %>%
-              #   arrange(-accuracy)
-              # 
-              # print(res)
+              res <- bench.test %>%
+                mutate(accurate = ifelse(category == bench.preds.class, 1, 0)) %>%
+                group_by(category) %>%
+                # mutate(words = sapply(gregexpr("[[:alpha:]]+", content), function(x) sum(x > 0))) %>%
+                summarise(n = n(),
+                          pct = 100*n/dim(bench.test)[[1]],
+                          # words = sum(words),
+                          accurate = sum(accurate),
+                          accuracy = (100*accurate/n)) %>%
+                # select(category, n, pct, words, accuracy) %>%
+                select(category, n, pct, accuracy) %>%
+                arrange(-accuracy)
+              
+              print(res)
               
               save_model(model_name)
-        
+              
             }
             
           }
@@ -796,7 +853,7 @@ setwd("~/Dev/Git/R - Phys.org")
             gc()
             t0 <- Sys.time()
             res.model <- 'xgboost'
-              
+            
             xgb_params = list(
               objective = "multi:softmax",
               num_class = length(levels(bench.train$category)) + 1,
@@ -826,7 +883,7 @@ setwd("~/Dev/Git/R - Phys.org")
             res.time <- difftime(tend, t0, units = 'secs')
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.xgboost.preds]))/dim(bench.test)[[1]] 
             save_results()
-          
+            
             bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
             
             xgb.importance_matrix <- xgb.importance(bench.dtm_train@Dimnames[[2]], model = bench.xgboost_classifier)
@@ -892,7 +949,7 @@ setwd("~/Dev/Git/R - Phys.org")
             res.time <- difftime(tend, t0, units = 'secs')
             res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != ksvm.predict.class]))/dim(bench.test)[[1]]
             save_results()
-          
+            
             bench.ksvm_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
             
             print(bench.ksvm_classifier.accuracy)
@@ -924,7 +981,7 @@ setwd("~/Dev/Git/R - Phys.org")
             pca.dtm_train <- PCA(dt.bench.dtm_train[,!'category', with = FALSE], 
                                  graph = FALSE, 
                                  ncp = dim(dt.bench.dtm_train)[[2]] - 1
-                                 ); tend <- Sys.time()
+            ); tend <- Sys.time()
             
             print(difftime(tend,t0,units = 'mins')) #  3.454795 mins pour sub cat physics
             dim(pca.dtm_train$eig)
@@ -1088,7 +1145,7 @@ setwd("~/Dev/Git/R - Phys.org")
                               threshold = param.bench.neuralnet.threshold, # default = 0.01
                               #linear.output = FALSE,
                               lifesign = "full"
-                              );tend <- Sys.time()
+              );tend <- Sys.time()
               
               #summary(nn)
               bench.time <- ceiling(10*difftime(tend,t0,units = 'mins'))/10
@@ -1242,7 +1299,7 @@ setwd("~/Dev/Git/R - Phys.org")
                             threshold = param.bench.neuralnet.threshold, # default = 0.01
                             # linear.output = FALSE,
                             lifesign = "full"
-                            );tend <- Sys.time()
+            );tend <- Sys.time()
             
             summary(nn)
             bench.time <- ceiling(10*difftime(tend,t0,units = 'mins'))/10
