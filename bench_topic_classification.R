@@ -25,7 +25,8 @@ setwd("~/Dev/Git/R - Phys.org")
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
     # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
+    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
+    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
     
@@ -61,7 +62,7 @@ setwd("~/Dev/Git/R - Phys.org")
           # suppression des - qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
           # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
-          mutate(content = str_replace_all(content, "[^[A-Za-z]']", " ")) %>%
+          mutate(content = str_replace_all(content, "[^[A-Za-z]'-]", " ")) %>%
           # suppression des mots de une ou deux lettres remplaces par espace
           mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
           # transformation en minuscule
@@ -84,7 +85,8 @@ setwd("~/Dev/Git/R - Phys.org")
         library(textstem)
         d.art.c.bench$content.nolem <- d.art.c.bench$content
         d.art.c.bench$content <- d.art.c.bench$content %>%
-          lemmatize_strings()
+          lemmatize_strings() #%>%
+          # str_replace_all(' - ', '-')
       }
       
       d.user.actifs <- d.user[nbcom>2 & nbart>2]
@@ -192,7 +194,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
-    param.bench.xgboost = TRUE
+    param.bench.xgboost = FALSE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -649,6 +651,7 @@ setwd("~/Dev/Git/R - Phys.org")
               
               # num_train_doc = 30
               # id_doc = as.numeric(colnames(bench.dt_train.sim[,num_train_doc, with=FALSE]))
+              # d.art.c.bench.url[id == id_doc]$url
               # d.art.c.bench[id == id_doc]$content
               
               
