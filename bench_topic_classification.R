@@ -183,7 +183,8 @@
     
     param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
-    param.bench.xgboost = FALSE
+    param.bench.xgboost = TRUE
+    param.randomForest = TRUE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -815,17 +816,18 @@
           if(param.randomForest) {
             cat('\n','------------------------------------')
             cat('\n','Randomforest :\n')
+            
             suppressWarnings(suppressMessages(library(randomForest)))
             
             gc()
             t0 <- Sys.time()
-            res.model <- 'xgboost'
+            res.model <- 'Randomforest'
             
-            domForest_classifier <- randomForest(
+            randomForest_classifier <- randomForest(
               x = as.matrix(bench.dtm_train), 
               y = bench.train[['category']],
               importance = TRUE,
-              ntree = 500)
+              ntree = 50)
             
             bench.randomforest.preds  <- predict(bench.randomForest_classifier, as.matrix(bench.dtm_test))
             bench.test$bench.randomForest_classifier.class <- bench.randomforest.preds
@@ -834,6 +836,8 @@
             res.time <- difftime(tend, t0, units = 'secs')
             
             res.confmat <- confusionMatrix(bench.test$bench.randomForest_classifier.class, bench.test$category)
+            print(res.confmat$overall[['Accuracy']])
+            plot(randomForest_classifier)
           }
           
           # --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
