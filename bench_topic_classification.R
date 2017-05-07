@@ -1,4 +1,4 @@
-# save(list = c('bench.results'), file = 'data/results_bench_allmodels_nblines_500_2000.RData')
+# save(list = c('bench.results'), file = 'data/results_bench_glmnet_prunepure_Nanotechnology_10_500.RData')
 
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
@@ -24,22 +24,17 @@ setwd("~/Dev/Git/R - Phys.org")
   # LOAD DATA ---------------------------------------------------------------
   {
     
-    param.lemmatized = TRUE
+    suppressWarnings(suppressMessages(library(tm)))
+    
+    param.lemmatized = FALSE
     param.dataorg.file <- 'data/physorg.RData'
     # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
     # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
-    param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
+    param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
+    # param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
     
-    if(param.lemmatized) {
-      param.clean_content.file <- param.clean_lemmatized_content.file
-    } else {
-      param.clean_content.file <- param.clean_not_lemmatized_content.file
-    }
-    
     if(!file.exists(param.clean_content.file)) {
-      suppressWarnings(suppressMessages(library(tm)))
       load(param.dataorg.file)
       
       # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
@@ -119,7 +114,20 @@ setwd("~/Dev/Git/R - Phys.org")
     } 
     else 
     {
+      protected.obj <- c('bench.results', 'param.clean_content.file', 'param.lemmatized')
+      rm(list = setdiff(ls(), protected.obj))
       load(param.clean_content.file)
+      
+      if(!param.lemmatized) {
+        d.art.c.bench$content <- d.art.c.bench$content.nolem
+      } 
+      
+      d.art.c.bench$content.nolem <- NULL
+      d.art.c.bench$content.org <- NULL
+      rm(d.art.c.bench.sample)
+      rm(d.art.com.user.actifs)
+      rm(d.user.actifs)
+      rm(d.com.user.actifs)
     }
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
@@ -135,12 +143,12 @@ setwd("~/Dev/Git/R - Phys.org")
   # PARAMS ------------------------------------------------------------------
   {
     ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 7
+    param.doparall.worker = 3
     
     ## -- PIPLINE --
-    param.dotfidf = TRUE
+    param.dotfidf = FALSE
     param.dostem = FALSE
-    param.dongram = TRUE
+    param.dongram = FALSE
     param.dofeaturehashing = FALSE # incompatible avec prune
     param.doprune = TRUE
     
@@ -149,7 +157,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     
-    param.mutate.subcat.cat <- c('Nanotechnology')
+    param.mutate.subcat.cat <- c('Other Sciences')
     
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -184,9 +192,9 @@ setwd("~/Dev/Git/R - Phys.org")
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
-    param.startmodel.prune = 1
-    param.maxmodel.prune = 1
-    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = 30)))),
+    param.startmodel.prune = 2
+    param.maxmodel.prune = 200
+    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(30),log(500), length.out = param.maxmodel.prune)))),
                             doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
                             doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
     )
@@ -194,7 +202,7 @@ setwd("~/Dev/Git/R - Phys.org")
     param.hngram = 2 ** 18
     param.seed = 20170416
     
-    param.bench.glmnet = FALSE
+    param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
     param.bench.xgboost = FALSE
     param.bench.svmk = FALSE
@@ -532,8 +540,8 @@ setwd("~/Dev/Git/R - Phys.org")
           ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
           ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
           param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-          param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
-          param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
+          param.prune.doc_proportion_max <<- param.prune.doc_proportion_max.default # param.prune.inc$doc_proportion_max.inc[[i_prune]]
+          param.prune.doc_proportion_min <<- param.prune.doc_proportion_min.default # param.prune.inc$doc_proportion_min.inc[[i_prune]]
           
           t0 = Sys.time()
           if(param.dofeaturehashing) {
