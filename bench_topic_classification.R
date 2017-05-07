@@ -173,8 +173,8 @@ setwd("~/Dev/Git/R - Phys.org")
     
     ## -- MAX DATA
     param.nblines_max.default = 1000^10
-    param.startmodel.nblines_max = 1
-    param.maxmodel.nblines_max = 1
+    param.startmodel.nblines_max = 2
+    param.maxmodel.nblines_max = 20
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
     
     param.train_test <- 0.7
@@ -204,7 +204,8 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
-    param.bench.xgboost = FALSE
+    param.bench.xgboost = TRUE
+    param.randomForest = TRUE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -852,6 +853,32 @@ setwd("~/Dev/Git/R - Phys.org")
             print(difftime(tend, t0, units = 'mins'))
           }
           
+          if(param.randomForest) {
+            cat('\n','------------------------------------')
+            cat('\n','Randomforest :\n')
+            
+            suppressWarnings(suppressMessages(library(randomForest)))
+            
+            gc()
+            t0 <- Sys.time()
+            res.model <- 'Randomforest'
+            
+            randomForest_classifier <- randomForest(
+              x = as.matrix(bench.dtm_train), 
+              y = bench.train[['category']],
+              importance = TRUE,
+              ntree = 50)
+            
+            bench.randomforest.preds  <- predict(bench.randomForest_classifier, as.matrix(bench.dtm_test))
+            bench.test$bench.randomForest_classifier.class <- bench.randomforest.preds
+            
+            tend <- Sys.time()
+            res.time <- difftime(tend, t0, units = 'secs')
+            
+            res.confmat <- confusionMatrix(bench.test$bench.randomForest_classifier.class, bench.test$category)
+            print(res.confmat$overall[['Accuracy']])
+            plot(randomForest_classifier)
+          }
           
           # --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
           # param.mutate.subcat.cat <- c('Physics')
