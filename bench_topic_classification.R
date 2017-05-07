@@ -1,9 +1,11 @@
-# save(list = c('bench.results'), file = 'data/results_bench_allmodels_nblines_500_2000.RData')
+# save(list = c('bench.results'), file = 'data/results_bench_glm-randomF-Xgb_Nanotechnology_nblines_800_5000_v2.RData')
+# doc_proportion_max.inc
 
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-setwd("~/Dev/Git/R - Phys.org")
+# setwd("~/Dev/Git/R - Phys.org")
+setwd("~/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -26,7 +28,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
+    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
     # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
     param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
@@ -135,12 +137,12 @@ setwd("~/Dev/Git/R - Phys.org")
   # PARAMS ------------------------------------------------------------------
   {
     ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 7
+    param.doparall.worker = 2
     
     ## -- PIPLINE --
     param.dotfidf = TRUE
     param.dostem = FALSE
-    param.dongram = TRUE
+    param.dongram = FALSE
     param.dofeaturehashing = FALSE # incompatible avec prune
     param.doprune = TRUE
     
@@ -165,9 +167,9 @@ setwd("~/Dev/Git/R - Phys.org")
     
     ## -- MAX DATA
     param.nblines_max.default = 1000^10
-    param.startmodel.nblines_max = 2
-    param.maxmodel.nblines_max = 20
-    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
+    param.startmodel.nblines_max = 1
+    param.maxmodel.nblines_max = 1
+    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(800),log(5000), length.out = param.maxmodel.nblines_max))))
     
     param.train_test <- 0.7
     
@@ -180,15 +182,15 @@ setwd("~/Dev/Git/R - Phys.org")
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 10 # 80 # 40 # (default pkg 1)
+    param.prune.term_count_min.default = 40 # 80 # 40 # (default pkg 1)
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
-    param.startmodel.prune = 1
-    param.maxmodel.prune = 1
-    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = 30)))),
-                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
-                            doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
+    param.startmodel.prune = 2
+    param.maxmodel.prune = 20
+    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = param.maxmodel.prune)))),
+                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.7), length.out = param.maxmodel.prune))),
+                            doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = param.maxmodel.prune)))/100000)
     )
     
     param.hngram = 2 ** 18
@@ -234,12 +236,12 @@ setwd("~/Dev/Git/R - Phys.org")
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
       
-      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
-        aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
-        geom_point() + geom_smooth(span = 0.9, se = FALSE) +
-        labs(x = 'Articles', y = 'Accuracy')
+      bench.results %>% ggplot() +
+        aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
+        geom_point() + geom_smooth(span = 0.1, se = FALSE) +
+        labs(x = 'Articles', y = 'F1')
       
-      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+      bench.results %>% ggplot() +
         aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
@@ -532,9 +534,9 @@ setwd("~/Dev/Git/R - Phys.org")
         {
           ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
           ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
-          param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
+          param.prune.term_count_min <<- 45 # param.prune.inc$term_count_min.inc[[i_prune]]
           param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
-          param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
+          param.prune.doc_proportion_min <<- 0 # param.prune.inc$doc_proportion_min.inc[[i_prune]]
           
           t0 = Sys.time()
           if(param.dofeaturehashing) {
@@ -855,7 +857,7 @@ setwd("~/Dev/Git/R - Phys.org")
             t0 <- Sys.time()
             res.model <- 'Randomforest'
             
-            randomForest_classifier <- randomForest(
+            bench.randomForest_classifier <- randomForest(
               x = as.matrix(bench.dtm_train), 
               y = bench.train[['category']],
               importance = TRUE,
@@ -868,8 +870,10 @@ setwd("~/Dev/Git/R - Phys.org")
             res.time <- difftime(tend, t0, units = 'secs')
             
             res.confmat <- confusionMatrix(bench.test$bench.randomForest_classifier.class, bench.test$category)
+            save_results()
+            
             print(res.confmat$overall[['Accuracy']])
-            plot(randomForest_classifier)
+            plot(bench.randomForest_classifier)
           }
           
           # --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
