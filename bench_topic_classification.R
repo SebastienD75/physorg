@@ -1,9 +1,10 @@
-# save(list = c('bench.results'), file = 'data/results_bench_allmodels_nblines_500_2000.RData')
+# save(list = c('bench.results'), file = 'data/results_bench_glmnet_prune_Technology_10_500.RData')
 
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-setwd("~/Dev/Git/R - Phys.org")
+# setwd("~/Dev/Git/R - Phys.org")
+setwd("D:/Documents/Dev/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -23,11 +24,12 @@ setwd("~/Dev/Git/R - Phys.org")
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    
+    suppressWarnings(suppressMessages(library(tm)))
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
+    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
+    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
+    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
     param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
     
@@ -38,7 +40,6 @@ setwd("~/Dev/Git/R - Phys.org")
     }
     
     if(!file.exists(param.clean_content.file)) {
-      suppressWarnings(suppressMessages(library(tm)))
       load(param.dataorg.file)
       
       # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
@@ -147,7 +148,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     
-    param.mutate.subcat.cat <- c('Nanotechnology')
+    param.mutate.subcat.cat <- c('Technology')
     
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -182,9 +183,9 @@ setwd("~/Dev/Git/R - Phys.org")
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
-    param.startmodel.prune = 1
-    param.maxmodel.prune = 1
-    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = 30)))),
+    param.startmodel.prune = 2
+    param.maxmodel.prune = 200
+    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(10),log(500), length.out = param.maxmodel.prune)))),
                             doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
                             doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
     )
@@ -192,9 +193,9 @@ setwd("~/Dev/Git/R - Phys.org")
     param.hngram = 2 ** 18
     param.seed = 20170416
     
-    param.bench.glmnet = FALSE
+    param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
-    param.bench.xgboost = TRUE
+    param.bench.xgboost = FALSE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -248,6 +249,11 @@ setwd("~/Dev/Git/R - Phys.org")
         geom_point() + geom_smooth(span = 0.9, se = FALSE) +
         labs(x = 'Articles', y = 'F1')
       
+      bench.results %>% filter(Model == 'cv.glmnet') %>% 
+        ggplot() +
+        geom_point(aes(x = PRUNE_tcmi, y = F1, group = Model, fill = Category, color = Category)) + 
+        geom_smooth(aes(x = PRUNE_tcmi, y = F1, group = Model, fill = Category, color = Category), span = 0.9, se = FALSE) +
+        labs(x = 'Prune', y = 'F1') 
       
       bench.results %>% filter(Model != 'pca.neuralnet', Model != 'pcaNNet', Model != 'pca.multinom')  %>% ggplot() +
         aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
@@ -530,8 +536,8 @@ setwd("~/Dev/Git/R - Phys.org")
           ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
           ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
           param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-          param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
-          param.prune.doc_proportion_min <<- param.prune.inc$doc_proportion_min.inc[[i_prune]]
+          param.prune.doc_proportion_max <<- param.prune.doc_proportion_max.default # param.prune.inc$doc_proportion_max.inc[[i_prune]]
+          param.prune.doc_proportion_min <<- param.prune.doc_proportion_min.default # param.prune.inc$doc_proportion_min.inc[[i_prune]]
           
           t0 = Sys.time()
           if(param.dofeaturehashing) {
