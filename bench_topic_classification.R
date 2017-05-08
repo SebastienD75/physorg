@@ -16,6 +16,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
   suppressWarnings(suppressMessages(library(doParallel)))
   suppressWarnings(suppressMessages(library(text2vec)))
   suppressWarnings(suppressMessages(library(caret)))
+  suppressWarnings(suppressMessages(library(tm)))
   
   # library (ROCR)
   # library(textstem)
@@ -24,17 +25,12 @@ setwd("D:/Documents/Dev/R - Phys.org")
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    suppressWarnings(suppressMessages(library(tm)))
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
-    full_subcat_sample_size <- 100
     
-    if(param.lemmatized) {
-      param.clean_content.file <- param.clean_lemmatized_content.file
-    } else {
-      param.clean_content.file <- param.clean_not_lemmatized_content.file
-    }
+    param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
+    
+    full_subcat_sample_size <- 100
     
     if(!file.exists(param.clean_content.file)) {
       load(param.dataorg.file)
@@ -61,7 +57,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
           # suppression des - qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
           # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
-          mutate(content = str_replace_all(content, "[^[A-Za-z]']", " ")) %>%
+          mutate(content = str_replace_all(content, "[^[A-Za-z]'-]", " ")) %>%
           # suppression des mots de une ou deux lettres remplaces par espace
           mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
           # transformation en minuscule
@@ -84,7 +80,8 @@ setwd("D:/Documents/Dev/R - Phys.org")
         library(textstem)
         d.art.c.bench$content.nolem <- d.art.c.bench$content
         d.art.c.bench$content <- d.art.c.bench$content %>%
-          lemmatize_strings()
+          lemmatize_strings() #%>%
+          # str_replace_all(' - ', '-')
       }
       
       d.user.actifs <- d.user[nbcom>2 & nbart>2]
@@ -115,7 +112,20 @@ setwd("D:/Documents/Dev/R - Phys.org")
     } 
     else 
     {
+      protected.obj <- c('bench.results', 'param.clean_content.file', 'param.lemmatized')
+      rm(list = setdiff(ls(), protected.obj))
       load(param.clean_content.file)
+      
+      if(!param.lemmatized) {
+        d.art.c.bench$content <- d.art.c.bench$content.nolem
+      } 
+      
+      d.art.c.bench$content.nolem <- NULL
+      d.art.c.bench$content.org <- NULL
+      rm(d.art.c.bench.sample)
+      rm(d.art.com.user.actifs)
+      rm(d.user.actifs)
+      rm(d.com.user.actifs)
     }
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
@@ -131,12 +141,12 @@ setwd("D:/Documents/Dev/R - Phys.org")
   # PARAMS ------------------------------------------------------------------
   {
     ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 7
+    param.doparall.worker = 3
     
     ## -- PIPLINE --
-    param.dotfidf = TRUE
+    param.dotfidf = FALSE
     param.dostem = FALSE
-    param.dongram = TRUE
+    param.dongram = FALSE
     param.dofeaturehashing = FALSE # incompatible avec prune
     param.doprune = TRUE
     
@@ -161,8 +171,8 @@ setwd("D:/Documents/Dev/R - Phys.org")
     
     ## -- MAX DATA
     param.nblines_max.default = 1000^10
-    param.startmodel.nblines_max = 1
-    param.maxmodel.nblines_max = 1
+    param.startmodel.nblines_max = 2
+    param.maxmodel.nblines_max = 20
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
     
     param.train_test <- 0.7
@@ -194,6 +204,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
     param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
     param.bench.xgboost = FALSE
+    param.randomForest = FALSE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -536,13 +547,15 @@ setwd("D:/Documents/Dev/R - Phys.org")
           param.prune.term_count_min <<- ifelse(param.actif.prune != 'param.prune.term_count_min', 
                                                 param.prune.term_count_min.default, 
                                                 param.prune.inc$term_count_min.inc[[i_prune]])
+          
           param.prune.doc_proportion_max <<- ifelse(param.actif.prune != 'param.prune.doc_proportion_max', 
                                                     param.prune.doc_proportion_max.default, 
                                                     param.prune.inc$doc_proportion_max.inc[[i_prune]])
+          
           param.prune.doc_proportion_min <<- ifelse(param.actif.prune != 'param.prune.doc_proportion_min', 
                                                     param.prune.doc_proportion_min.default, 
                                                     param.prune.inc$doc_proportion_min.inc[[i_prune]])
-          
+
           t0 = Sys.time()
           if(param.dofeaturehashing) {
             print('FEATURE HASHING : TRUE')
@@ -670,6 +683,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
               
               # num_train_doc = 30
               # id_doc = as.numeric(colnames(bench.dt_train.sim[,num_train_doc, with=FALSE]))
+              # d.art.c.bench.url[id == id_doc]$url
               # d.art.c.bench[id == id_doc]$content
               
               
@@ -851,6 +865,34 @@ setwd("D:/Documents/Dev/R - Phys.org")
             print(difftime(tend, t0, units = 'mins'))
           }
           
+          if(param.randomForest) {
+            cat('\n','------------------------------------')
+            cat('\n','Randomforest :\n')
+            
+            suppressWarnings(suppressMessages(library(randomForest)))
+            
+            gc()
+            t0 <- Sys.time()
+            res.model <- 'Randomforest'
+            
+            randomForest_classifier <- randomForest(
+              x = as.matrix(bench.dtm_train), 
+              y = bench.train[['category']],
+              importance = TRUE,
+              ntree = 50)
+            
+            bench.randomforest.preds  <- predict(bench.randomForest_classifier, as.matrix(bench.dtm_test))
+            bench.test$bench.randomForest_classifier.class <- bench.randomforest.preds
+            
+            tend <- Sys.time()
+            res.time <- difftime(tend, t0, units = 'secs')
+            
+            res.confmat <- confusionMatrix(bench.test$bench.randomForest_classifier.class, bench.test$category)
+            save_results()
+            
+            print(res.confmat$overall[['Accuracy']])
+            # plot(randomForest_classifier)
+          }
           
           # --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
           # param.mutate.subcat.cat <- c('Physics')
