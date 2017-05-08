@@ -188,7 +188,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
                             doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.6), length.out = param.maxmodel.prune))),
                             doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = param.maxmodel.prune)))/100000)
     )
-    param.actif.prune <- ''
+    param.actif.prune <- 'param.prune.term_count_min'
     
     param.hngram = 2 ** 18
     param.seed = 20170416
