@@ -163,9 +163,9 @@ setwd("D:/Documents/Dev/R - Phys.org")
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
     
     ## -- MAX DATA
-    param.nblines_max.default = 1000^10
-    param.startmodel.nblines_max = 2
-    param.maxmodel.nblines_max = 20
+    param.nblines_max.default = 1e10
+    param.startmodel.nblines_max = 1
+    param.maxmodel.nblines_max = 1
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
     
     param.train_test <- 0.7
@@ -182,14 +182,13 @@ setwd("D:/Documents/Dev/R - Phys.org")
     param.prune.term_count_min.default = 80
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
-    #param.prune.doc_proportion_min.default = # (default Inf)
-    param.startmodel.prune = 2
-    param.maxmodel.prune = 30
+    param.startmodel.prune = 1
+    param.maxmodel.prune = 1
     param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(10),log(500), length.out = param.maxmodel.prune)))),
                             doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.6), length.out = param.maxmodel.prune))),
                             doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = param.maxmodel.prune)))/100000)
     )
-    param.actif.prune <- 'doc_proportion_max.inc'
+    param.actif.prune <- ''
     
     param.hngram = 2 ** 18
     param.seed = 20170416
