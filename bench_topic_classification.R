@@ -27,10 +27,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
     suppressWarnings(suppressMessages(library(tm)))
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
-    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
     param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
-    param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
     full_subcat_sample_size <- 100
     
     if(param.lemmatized) {
@@ -179,16 +176,17 @@ setwd("D:/Documents/Dev/R - Phys.org")
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 10 # 80 # 40 # (default pkg 1)
+    param.prune.term_count_min.default = 80
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     #param.prune.doc_proportion_min.default = # (default Inf)
     param.startmodel.prune = 2
-    param.maxmodel.prune = 200
+    param.maxmodel.prune = 30
     param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(10),log(500), length.out = param.maxmodel.prune)))),
-                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, ceiling(exp(seq(log(9), log(1), length.out = 20)))/10),
-                            doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = 20)))/100000)
+                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.6), length.out = param.maxmodel.prune))),
+                            doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = param.maxmodel.prune)))/100000)
     )
+    param.actif.prune <- 'doc_proportion_max.inc'
     
     param.hngram = 2 ** 18
     param.seed = 20170416
@@ -237,7 +235,9 @@ setwd("D:/Documents/Dev/R - Phys.org")
         geom_point() + geom_smooth(span = 0.9, se = FALSE) +
         labs(x = 'Articles', y = 'Accuracy')
       
-      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
+      bench.results %>% 
+        filter(F1 > 0.35) %>% 
+        ggplot() +
         aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
@@ -533,11 +533,15 @@ setwd("D:/Documents/Dev/R - Phys.org")
           param.startmodel.prune = 1
         }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
         {
-          ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
-          ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
-          param.prune.term_count_min <<- param.prune.inc$term_count_min.inc[[i_prune]]
-          param.prune.doc_proportion_max <<- param.prune.doc_proportion_max.default # param.prune.inc$doc_proportion_max.inc[[i_prune]]
-          param.prune.doc_proportion_min <<- param.prune.doc_proportion_min.default # param.prune.inc$doc_proportion_min.inc[[i_prune]]
+          param.prune.term_count_min <<- ifelse(param.actif.prune != 'param.prune.term_count_min', 
+                                                param.prune.term_count_min.default, 
+                                                param.prune.inc$term_count_min.inc[[i_prune]])
+          param.prune.doc_proportion_max <<- ifelse(param.actif.prune != 'param.prune.doc_proportion_max', 
+                                                    param.prune.doc_proportion_max.default, 
+                                                    param.prune.inc$doc_proportion_max.inc[[i_prune]])
+          param.prune.doc_proportion_min <<- ifelse(param.actif.prune != 'param.prune.doc_proportion_min', 
+                                                    param.prune.doc_proportion_min.default, 
+                                                    param.prune.inc$doc_proportion_min.inc[[i_prune]])
           
           t0 = Sys.time()
           if(param.dofeaturehashing) {
