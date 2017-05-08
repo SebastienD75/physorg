@@ -25,11 +25,10 @@ setwd("D:/Documents/Dev/R - Phys.org")
 {
   # LOAD DATA ---------------------------------------------------------------
   {
+    param.doparall.worker = 3
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    
     param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
-    
     full_subcat_sample_size <- 100
     
     if(!file.exists(param.clean_content.file)) {
@@ -140,28 +139,22 @@ setwd("D:/Documents/Dev/R - Phys.org")
   
   # PARAMS ------------------------------------------------------------------
   {
-    ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 3
     
     ## -- PIPLINE --
-    param.dotfidf = FALSE
-    param.dostem = FALSE
-    param.dongram = FALSE
-    param.dofeaturehashing = FALSE # incompatible avec prune
+    param.dotfidf = TRUE
     param.doprune = TRUE
+    param.dongram = TRUE
+    param.dofeaturehashing = FALSE # incompatible avec prune
+    param.dostem = FALSE
     
     ## -- CAT / SUB CAT --
     param.mutate.subcat.as.cat = TRUE
-    
-    param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-    
     param.mutate.subcat.cat <- c('Technology')
-    
+    param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                       'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                       'Materials Science')
-    
     
     ## -- PCT USED DATA 
     param.pctdata.default = 1
