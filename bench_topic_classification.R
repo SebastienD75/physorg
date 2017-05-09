@@ -25,7 +25,6 @@ setwd("D:/Documents/Dev/R - Phys.org")
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    param.doparall.worker = 3
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
     param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
@@ -56,6 +55,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
           # suppression des - qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
           # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
+          # les mots avec "-" posent problemes apres lematization ils se transforment en '<> - <>'
           mutate(content = str_replace_all(content, "[^[A-Za-z]'-]", " ")) %>%
           # suppression des mots de une ou deux lettres remplaces par espace
           mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
@@ -81,6 +81,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
         d.art.c.bench$content <- d.art.c.bench$content %>%
           lemmatize_strings() #%>%
           # str_replace_all(' - ', '-')
+         # str_replace_all(' - ', ' ')
       }
       
       d.user.actifs <- d.user[nbcom>2 & nbart>2]
@@ -139,6 +140,8 @@ setwd("D:/Documents/Dev/R - Phys.org")
   
   # PARAMS ------------------------------------------------------------------
   {
+    
+    param.doparall.worker = 3
     
     ## -- PIPLINE --
     param.dotfidf = TRUE
