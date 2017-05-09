@@ -350,23 +350,25 @@ setwd("~/Dev/Git/R - Phys.org")
     select(user, id, nbarticlecomments) %>%
     unique() %>%
     group_by(user, id) %>% 
-    summarise(comments = mean(nbarticlecomments)) %>%
-    spread(id, comments, fill = 0) %>%
-    as.matrix()
+    summarise(comments = as.numeric(ifelse(!is.na(mean(nbarticlecomments)) | mean(nbarticlecomments)>0, 1, 0))) %>%
+    spread(id, comments, fill = 0, convert = TRUE) %>%
+    setDT
   
+  d.recommanded.mat$user <- NULL
+  d.recommanded.mat <- as.matrix(d.recommanded.mat)
   dim(d.recommanded.mat)
   gc()
   
   # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
   # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
-  afm <- as(as.matrix(d.recommanded.mat), "realRatingMatrix")
-  
-  # d.recommanded.mat <- d.recommanded.mat.tmp %>% 
-  #   group_by(user, id) %>% 
-  #   summarise(nc = mean(nbarticlecomments)) %>% 
-  #   spread(id, nc)  %>%
-  #   as(as.matrix(.), "realRatingMatrix")
-  # 
+  afm <- as(d.recommanded.mat, "realRatingMatrix")
+  reco.model <- Recommender(afm, method = 'UBCF')
+  topitems <- predict(reco.model, afm[100,], n=5)
+  topitems
+  as(topitems, 'list')
+  best3 <- bestN(topitems, n = 3)
+  best3
+  as(best3, 'list')
 }
 
 
