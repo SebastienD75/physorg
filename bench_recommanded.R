@@ -19,8 +19,11 @@ setwd("~/Dev/Git/R - Phys.org")
 # Find actif user data ---------------------------------------------------------------
 {
   param.lemmatized = TRUE
-  param.nbmin_usercomments = 10
-  param.nbmin_userarticles = 10
+  param.nbmin_artcomments = 20
+  # param.nbmin_usercomments = 50 #10
+  # param.nbmax_usercomments = 500 #300
+  # param.nbmin_userarticles = 25 #5
+  # param.nbmax_userarticles = 200
   full_subcat_sample_size <- 100
   param.clean_content.file <- 'data/physorg_bagofwords_d.art.c.bench_d.user_d.com.RData'
   
@@ -28,9 +31,18 @@ setwd("~/Dev/Git/R - Phys.org")
   load(param.clean_content.file)
   d.art.c.bench.org <- d.art.c.bench
   
-  d.user.actifs <- d.user[nbcom>param.nbmin_usercomments & nbart>param.nbmin_userarticles]
+  qplot(d.com$nbarticlecomments, geom='histogram', bins = 100, xlim = c(5,300))
+  
+  # d.user.actifs <- d.user[nbcom >= param.nbmin_usercomments & 
+  #                           nbcom <= param.nbmax_usercomments &
+  #                           nbart >= param.nbmin_userarticles & 
+  #                           nbart <= param.nbmax_userarticles]
+  
+  
+  d.user.actifs <- d.user
   d.user.actifs$user <- droplevels(d.user.actifs$user)
-  d.com.user.actifs <- d.com[user %in% d.user.actifs$user]
+  d.com.user.actifs <- d.com[nbarticlecomments >= param.nbmin_artcomments & 
+                               user %in% d.user.actifs$user]
   d.com.user.actifs$user <- droplevels(d.com.user.actifs$user)
   d.art.com.user.actifs <- d.art.c.bench[url %in% d.com.user.actifs$url]
   d.art.com.user.actifs$subcategory <- droplevels(d.art.com.user.actifs$subcategory)
@@ -39,7 +51,6 @@ setwd("~/Dev/Git/R - Phys.org")
   # d.com.user.actifs %>% group_by(user) %>% summarise(comments = n(), mean_rank = mean(rank),  wc = sum(wc_comment)) %>% arrange(-comments)
   
   d.art.c.bench <- d.art.com.user.actifs
-  rm(d.art.com.user.actifs)
   
   d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
   d.art.c.bench$url <- NULL
@@ -58,7 +69,7 @@ setwd("~/Dev/Git/R - Phys.org")
     d.art.c.bench.sample <- rbind(d.art.c.bench.sample, sample_subcat)
   }
   
-  rm(list = c('d.com','d.user'))
+  rm(list = c('d.art.com.user.actifs','d.com','d.user'))
   
   cat('\nActif users: ',dim(d.user.actifs)[[1]])
   cat('\nDocuments of actif users: ', dim(d.art.c.bench)[[1]])
@@ -287,6 +298,7 @@ setwd("~/Dev/Git/R - Phys.org")
   }
 }
 
+#### TFIDF
 {
   cat('\n Cosine similary','------------------------------------')
   gc()
@@ -341,34 +353,85 @@ setwd("~/Dev/Git/R - Phys.org")
   
   cat('\n Recommanded sys','------------------------------------')
   
-  pobj <- c('d.recommanded.mat', 'd.com.user.actifs', 'd.art.c.bench.url')
+  param.test_useridx = 2
+  
+  pobj <- c('param.test_useridx','afm.bin','afm.real','d.recommanded.users','d.recommanded.bin','d.recommanded.real', 'd.com.user.actifs', 'd.art.c.bench.url')
+  
   rm(list = setdiff(ls(), pobj))
   gc()
   
-  d.recommanded.mat <- d.com.user.actifs %>% 
+  d.recommanded.real <- d.com.user.actifs %>% 
     left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
-    select(user, id, nbarticlecomments) %>%
+    select(user, id, rank) %>%
     unique() %>%
     group_by(user, id) %>% 
-    summarise(comments = as.numeric(ifelse(!is.na(mean(nbarticlecomments)) | mean(nbarticlecomments)>0, 1, 0))) %>%
+    summarise(comments = as.numeric(ifelse(!is.na(mean(rank)) | mean(rank)>0, mean(rank), 0))) %>%
     spread(id, comments, fill = 0, convert = TRUE) %>%
     setDT
   
-  d.recommanded.mat$user <- NULL
-  d.recommanded.mat <- as.matrix(d.recommanded.mat)
-  dim(d.recommanded.mat)
+  d.recommanded.users <- d.recommanded.real$user 
+  
+  which(d.recommanded.real[param.test_useridx,-1] != 0)
+  d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
+  
+  d.recommanded.real.mat <- as.matrix(d.recommanded.real[,2:dim(d.recommanded.real)[[2]]])
+  rownames(d.recommanded.real.mat) <- d.recommanded.real$user
+  
+  d.recommanded.bin <- copy(d.recommanded.real)
+  d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD, function(c) ifelse(c == 0, 0, 1)), .SDcols = names(d.recommanded.bin[,-1])]
+  
+  which(d.recommanded.bin[param.test_useridx,-1] != 0)
+  d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
+  
+  d.recommanded.bin.mat <- as.matrix(d.recommanded.bin[,2:dim(d.recommanded.bin)[[2]]])
+  rownames(d.recommanded.bin.mat) <- d.recommanded.bin$user
+  
   gc()
+  dim(d.recommanded.bin)
   
   # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
   # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
-  afm <- as(d.recommanded.mat, "realRatingMatrix")
-  reco.model <- Recommender(afm, method = 'UBCF')
-  topitems <- predict(reco.model, afm[100,], n=5)
+  
+  ## ----------------
+  
+  
+  # recommenderRegistry$get_entry_names()
+  dim(d.recommanded.mat.bin)
+  gc()
+  
+  afm.real <- as(d.recommanded.real.mat, "realRatingMatrix")
+  afm.bin <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
+  
+  image(sample(afm.bin, 1000), main = "Raw ratings")
+  qplot(getRatings(afm.real), binwidth = 1, 
+        main = "Histogram of ratings", xlab = "Rating")
+  
+  reco.model <- Recommender(afm.bin, method = 'UBCF')
+  topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
+  
   topitems
   as(topitems, 'list')
+  
   best3 <- bestN(topitems, n = 3)
   best3
   as(best3, 'list')
+  
+  
+  ## ----------------
+  
+  reco.model <- Recommender(as(d.recommanded.real.mat, "realRatingMatrix"),
+                            method="UBCF",
+                            param=list(normalize = "Z-score",method="Cosine",nn=5)
+                            )
+  
+  topitems <- predict(reco.model, afm[100,], n=5)
+  topitems
+  as(topitems, 'list')
+  
+  best3 <- bestN(topitems, n = 3)
+  best3
+  as(best3, 'list')
+  
 }
 
 
