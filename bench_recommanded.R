@@ -14,6 +14,8 @@ setwd("~/Dev/Git/R - Phys.org")
   suppressWarnings(suppressMessages(library(RColorBrewer)))
   suppressWarnings(suppressMessages(library(recommenderlab)))
   suppressWarnings(suppressMessages(library(tidyr)))
+  suppressWarnings(suppressMessages(library(ggplot2)))
+  
 }
 
 # Find actif user data ---------------------------------------------------------------
@@ -72,7 +74,7 @@ setwd("~/Dev/Git/R - Phys.org")
   rm(list = c('d.art.com.user.actifs','d.com','d.user'))
   
   cat('\nActif users: ',dim(d.user.actifs)[[1]])
-  cat('\nDocuments of actif users: ', dim(d.art.c.bench)[[1]])
+  cat('\nDocuments of actif users: ', dim(d.art.c.bench)[[1]],'\n')
   
   gc()
 }
@@ -153,6 +155,8 @@ setwd("~/Dev/Git/R - Phys.org")
   }
 }
 
+
+#### TFIDF
 {
   cat('\n','------------------------------------')
   cat('\n','Categories to learn :\n')
@@ -298,7 +302,7 @@ setwd("~/Dev/Git/R - Phys.org")
   }
 }
 
-#### TFIDF
+
 {
   cat('\n Cosine similary','------------------------------------')
   gc()
@@ -339,7 +343,7 @@ setwd("~/Dev/Git/R - Phys.org")
   
   op <- par(mfrow = c(1, 2))
   boxplot(bench.dt_train.sim[,as.character(test_id_doc), with = FALSE])
-  boxplot(bench.dt_train.sim[id_doc != test_id_doc  ,as.character(test_id_doc), with = FALSE])
+  boxplot(bench.dt_train.sim[id_doc != test_id_doc, as.character(test_id_doc), with = FALSE])
   op <- par(mfrow = c(1, 1))
   
   bench.dt_train.sim[,c('id_doc',as.character(test_id_doc)), with = FALSE] %>% 
@@ -350,7 +354,8 @@ setwd("~/Dev/Git/R - Phys.org")
 }
 
 {
-  
+  # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
+  # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
   cat('\n Recommanded sys','------------------------------------')
   
   param.test_useridx = 2
@@ -365,8 +370,9 @@ setwd("~/Dev/Git/R - Phys.org")
     select(user, id, rank) %>%
     unique() %>%
     group_by(user, id) %>% 
-    summarise(comments = as.numeric(ifelse(!is.na(mean(rank)) | mean(rank)>0, mean(rank), 0))) %>%
-    spread(id, comments, fill = 0, convert = TRUE) %>%
+    summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), NA, mean(rank, na.rm = TRUE))) %>%
+    # spread(id, comments, fill = 0, convert = TRUE) %>%
+    spread(id, comments) %>%
     setDT
   
   d.recommanded.users <- d.recommanded.real$user 
@@ -375,10 +381,24 @@ setwd("~/Dev/Git/R - Phys.org")
   d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
   
   d.recommanded.real.mat <- as.matrix(d.recommanded.real[,2:dim(d.recommanded.real)[[2]]])
+  # d.recommanded.real.mat2[d.recommanded.real.mat2 == 0] <- NA
   rownames(d.recommanded.real.mat) <- d.recommanded.real$user
   
-  d.recommanded.bin <- copy(d.recommanded.real)
-  d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD, function(c) ifelse(c == 0, 0, 1)), .SDcols = names(d.recommanded.bin[,-1])]
+  # d.recommanded.bin <- copy(d.recommanded.real)
+  # d.recommanded.bin[!is.na(d.recommanded.bin), -1] <- 1
+  # d.recommanded.bin[!is.na(d.recommanded.bin)] <- 1
+  # d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD, 
+  #                                                             function(c) 
+  #                                                               ifelse(c == 0, 1, ifelse(is.na(c),0,1))), .SDcols = names(d.recommanded.bin[,-1])]
+  
+  d.recommanded.bin <- d.com.user.actifs %>% 
+    left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
+    select(user, id, rank) %>%
+    unique() %>%
+    group_by(user, id) %>% 
+    summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), 0, 1)) %>%
+    spread(id, comments, fill = 0, convert = TRUE) %>%
+    setDT
   
   which(d.recommanded.bin[param.test_useridx,-1] != 0)
   d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
@@ -389,24 +409,37 @@ setwd("~/Dev/Git/R - Phys.org")
   gc()
   dim(d.recommanded.bin)
   
-  # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
-  # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
   
   ## ----------------
   
   
   # recommenderRegistry$get_entry_names()
-  dim(d.recommanded.mat.bin)
-  gc()
-  
   afm.real <- as(d.recommanded.real.mat, "realRatingMatrix")
   afm.bin <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
   
   image(sample(afm.bin, 1000), main = "Raw ratings")
+  # très long, image noire 
+  # image(sample(afm.real, 500), main = "Raw ratings")
+  summary(getRatings(afm.real))
   qplot(getRatings(afm.real), binwidth = 1, 
         main = "Histogram of ratings", xlab = "Rating")
   
-  reco.model <- Recommender(afm.bin, method = 'UBCF')
+  qplot(getRatings(normalize(afm.real, method = "Z-score")),
+        main = "Histogram of normalized ratings", xlab = "Rating") 
+  
+  summary(getRatings(normalize(afm.real, method = "Z-score")))
+  
+  qplot(rowCounts(afm.real), binwidth = 10, 
+        main = "Document Rated on average", 
+        xlab = "# of users", 
+        ylab = "# of movies rated")
+  
+  qplot(colMeans(afm.real), binwidth = .1, 
+        main = "Mean rating of Movies", 
+        xlab = "Rating", 
+        ylab = "# of movies")
+  
+  reco.model.bin <- Recommender(afm.bin, method = 'UBCF')
   topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
   
   topitems
@@ -417,21 +450,62 @@ setwd("~/Dev/Git/R - Phys.org")
   as(best3, 'list')
   
   
+  reco.model.real <- Recommender(afm.real, method = 'UBCF')
+  topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
+  
+  topitems
+  as(topitems, 'list')
+  
+  
   ## ----------------
   
-  reco.model <- Recommender(as(d.recommanded.real.mat, "realRatingMatrix"),
+  reco.model.real2 <- Recommender(afm.real,
                             method="UBCF",
                             param=list(normalize = "Z-score",method="Cosine",nn=5)
                             )
   
-  topitems <- predict(reco.model, afm[100,], n=5)
+  topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
   topitems
   as(topitems, 'list')
   
-  best3 <- bestN(topitems, n = 3)
-  best3
-  as(best3, 'list')
+  ## ----------------
   
+  recommenderRegistry$get_entries(dataType = "realRatingMatrix")
+  recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
+  
+  scheme <- evaluationScheme(afm.real, method = "split", train = .9,
+                             k = 1, given = 1, goodRating = 0)
+  
+  scheme
+  
+  algorithms <- list(
+    "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
+    "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
+    "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
+                                                   method="Cosine",
+                                                   nn=50)),
+    "item-based CF" = list(name="IBCF", param=list(normalize = "Z-score")),
+    "item-based CF" = list(name="SVD", param=list(normalize = "Z-score"))
+  )
+  
+  # run algorithms, predict next n movies
+  results <- evaluate(scheme, algorithms, n=c(1, 3, 5, 10, 15, 20))
+  
+  # Draw ROC curve
+  plot(results, annotate = 1:4, legend="topleft")
+  
+  # See precision / recall
+  plot(results, "prec/rec", annotate=3)
+  
+  # ## simple split with 3 items given
+  # esSplit <- evaluationScheme(MSWeb10, method="split",
+  #                             train = 0.9, k=1, given=3)
+  # esSplit
+  # 
+  # ## 4-fold cross-validation with all-but-1 items for learning.
+  # esCross <- evaluationScheme(MSWeb10, method="cross-validation",
+  #                             k=4, given=-1)
+  # esCross
 }
 
 
