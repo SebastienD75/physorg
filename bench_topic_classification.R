@@ -166,6 +166,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
     
     ## -- MAX DATA
+
     param.nblines_max.default = 1e10
     param.startmodel.nblines_max = 1
     param.maxmodel.nblines_max = 1
@@ -182,6 +183,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
+
     param.prune.term_count_min.default = 80
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
@@ -236,10 +238,10 @@ setwd("D:/Documents/Dev/R - Phys.org")
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
       
-      bench.results %>% filter(Accuracy > 35, Time < 25*60) %>% ggplot() +
-        aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
-        geom_point() + geom_smooth(span = 0.9, se = FALSE) +
-        labs(x = 'Articles', y = 'Accuracy')
+      bench.results %>% ggplot() +
+        aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
+        geom_point() + geom_smooth(span = 0.1, se = FALSE) +
+        labs(x = 'Articles', y = 'F1')
       
       bench.results %>% 
         filter(F1 > 0.35) %>% 
@@ -539,6 +541,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
           param.startmodel.prune = 1
         }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
         {
+
           param.prune.term_count_min <<- ifelse(param.actif.prune != 'param.prune.term_count_min', 
                                                 param.prune.term_count_min.default, 
                                                 param.prune.inc$term_count_min.inc[[i_prune]])
@@ -870,7 +873,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
             t0 <- Sys.time()
             res.model <- 'Randomforest'
             
-            randomForest_classifier <- randomForest(
+            bench.randomForest_classifier <- randomForest(
               x = as.matrix(bench.dtm_train), 
               y = bench.train[['category']],
               importance = TRUE,
@@ -886,6 +889,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
             save_results()
             
             print(res.confmat$overall[['Accuracy']])
+
             # plot(randomForest_classifier)
           }
           
