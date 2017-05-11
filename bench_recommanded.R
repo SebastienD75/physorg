@@ -1,7 +1,7 @@
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-setwd("~/Dev/Git/R - Phys.org")
+# setwd("~/Dev/Git/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -21,7 +21,7 @@ setwd("~/Dev/Git/R - Phys.org")
 {
   param.lemmatized = TRUE
   param.recommanded.real = TRUE
-  param.nbmin_artcomments = 20
+  param.nbmin_artcomments = 15
   # param.nbmin_usercomments = 50 #10
   # param.nbmax_usercomments = 500 #300
   # param.nbmin_userarticles = 25 #5
@@ -98,7 +98,7 @@ setwd("~/Dev/Git/R - Phys.org")
   param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
-  param.mutate.subcat.as.cat = TRUE
+  param.mutate.subcat.as.cat = FALSE
   
   param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
   
@@ -115,7 +115,7 @@ setwd("~/Dev/Git/R - Phys.org")
   ## -- MAX DATA
   param.nblines_max.default = 1000^10
   
-  param.train_test <- 0.7
+  param.train_test <- 1
   
   ## -- PRUNE --
   param.prune.term_count_min.default = 80 
@@ -444,8 +444,8 @@ setwd("~/Dev/Git/R - Phys.org")
   recommenderRegistry$get_entries(dataType = "realRatingMatrix")
   recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
   
-  scheme <- evaluationScheme(afm, method = "split", train = .9,
-                             k = 1, given = 0, goodRating = 0)
+  scheme <- evaluationScheme(afm, method = "split", train = .7,
+                             k = 1, given = 1, goodRating = 2)
   
   scheme
   
@@ -455,18 +455,18 @@ setwd("~/Dev/Git/R - Phys.org")
     "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
                                                    method="Cosine",
                                                    nn=10)),
-    # "SVD" = list(name="SVD", param=list(normalize = "Z-score")),
+    "SVD" = list(name="SVD", param=list(normalize = "Z-score")),
     "item-based CF" = list(name="IBCF", param=list())
   )
   
   # run algorithms, predict next n movies
-  results <- evaluate(scheme, algorithms, n=c(1, 3, 5, 10, 15, 20))
+  results <- evaluate(scheme, algorithms, n=c(1, 3, 5, 10, 15, 20, 50), keepModel = TRUE)
   
   # Draw ROC curve
-  plot(results, annotate = 1:4, legend="topleft", ylim = c(0,0.005))
+  plot(results, annotate = 1:5, legend="topleft")
   
   # See precision / recall
-  plot(results, "prec/rec", annotate=3, xlim = c(0,1), ylim = c(0,1))
+  plot(results, "prec/rec", annotate = 1:5)
   
   # ## simple split with 3 items given
   # esSplit <- evaluationScheme(MSWeb10, method="split",
