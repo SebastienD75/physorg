@@ -1,11 +1,10 @@
-# save(list = c('bench.results'), file = 'data/results_bench_glm-randomF-Xgb_Nanotechnology_nblines_800_5000_v2.RData')
-# doc_proportion_max.inc
+# save(list = c('bench.results'), file = 'data/results_bench_glmnet_prune_Technology_10_500.RData')
 
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
 # setwd("~/Dev/Git/R - Phys.org")
-setwd("~/R - Phys.org")
+setwd("D:/Documents/Dev/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -17,6 +16,7 @@ setwd("~/R - Phys.org")
   suppressWarnings(suppressMessages(library(doParallel)))
   suppressWarnings(suppressMessages(library(text2vec)))
   suppressWarnings(suppressMessages(library(caret)))
+  suppressWarnings(suppressMessages(library(tm)))
   
   # library (ROCR)
   # library(textstem)
@@ -25,23 +25,12 @@ setwd("~/R - Phys.org")
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    
     param.lemmatized = TRUE
     param.dataorg.file <- 'data/physorg.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized.RData'
-    # param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full.RData'
-    param.clean_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
-    param.clean_not_lemmatized_content.file <- 'data/glmnet_cleancontent_catsubcat.not_lemmatized.RData'
+    param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
     full_subcat_sample_size <- 100
     
-    if(param.lemmatized) {
-      param.clean_content.file <- param.clean_lemmatized_content.file
-    } else {
-      param.clean_content.file <- param.clean_not_lemmatized_content.file
-    }
-    
     if(!file.exists(param.clean_content.file)) {
-      suppressWarnings(suppressMessages(library(tm)))
       load(param.dataorg.file)
       
       # rm(list = setdiff(ls(), c('d.art', 'param.lemmatized')))
@@ -66,6 +55,7 @@ setwd("~/R - Phys.org")
           # suppression des - qui ne sont pas dans des mots
           mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
           # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
+          # les mots avec "-" posent problemes apres lematization ils se transforment en '<> - <>'
           mutate(content = str_replace_all(content, "[^[A-Za-z]'-]", " ")) %>%
           # suppression des mots de une ou deux lettres remplaces par espace
           mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
@@ -91,6 +81,7 @@ setwd("~/R - Phys.org")
         d.art.c.bench$content <- d.art.c.bench$content %>%
           lemmatize_strings() #%>%
           # str_replace_all(' - ', '-')
+         # str_replace_all(' - ', ' ')
       }
       
       d.user.actifs <- d.user[nbcom>2 & nbart>2]
@@ -121,7 +112,20 @@ setwd("~/R - Phys.org")
     } 
     else 
     {
+      protected.obj <- c('bench.results', 'param.clean_content.file', 'param.lemmatized')
+      rm(list = setdiff(ls(), protected.obj))
       load(param.clean_content.file)
+      
+      if(!param.lemmatized) {
+        d.art.c.bench$content <- d.art.c.bench$content.nolem
+      } 
+      
+      d.art.c.bench$content.nolem <- NULL
+      d.art.c.bench$content.org <- NULL
+      rm(d.art.c.bench.sample)
+      rm(d.art.com.user.actifs)
+      rm(d.user.actifs)
+      rm(d.com.user.actifs)
     }
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
@@ -136,28 +140,24 @@ setwd("~/R - Phys.org")
   
   # PARAMS ------------------------------------------------------------------
   {
-    ## -- COMPUTEUR SPECIFICS --
-    param.doparall.worker = 2
+    
+    param.doparall.worker = 3
     
     ## -- PIPLINE --
     param.dotfidf = TRUE
-    param.dostem = FALSE
-    param.dongram = FALSE
-    param.dofeaturehashing = FALSE # incompatible avec prune
     param.doprune = TRUE
+    param.dongram = TRUE
+    param.dofeaturehashing = FALSE # incompatible avec prune
+    param.dostem = FALSE
     
     ## -- CAT / SUB CAT --
     param.mutate.subcat.as.cat = TRUE
-    
+    param.mutate.subcat.cat <- c('Technology')
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-    
-    param.mutate.subcat.cat <- c('Nanotechnology')
-    
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                       'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                       'Materials Science')
-    
     
     ## -- PCT USED DATA 
     param.pctdata.default = 1
@@ -166,10 +166,11 @@ setwd("~/R - Phys.org")
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
     
     ## -- MAX DATA
-    param.nblines_max.default = 1000^10
+
+    param.nblines_max.default = 1e10
     param.startmodel.nblines_max = 1
     param.maxmodel.nblines_max = 1
-    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(800),log(5000), length.out = param.maxmodel.nblines_max))))
+    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
     
     param.train_test <- 0.7
     
@@ -182,24 +183,25 @@ setwd("~/R - Phys.org")
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
     
     ## -- PRUNE --
-    param.prune.term_count_min.default = 40 # 80 # 40 # (default pkg 1)
+
+    param.prune.term_count_min.default = 80
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
-    #param.prune.doc_proportion_min.default = # (default Inf)
-    param.startmodel.prune = 2
-    param.maxmodel.prune = 20
-    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(20),log(300), length.out = param.maxmodel.prune)))),
-                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.7), length.out = param.maxmodel.prune))),
+    param.startmodel.prune = 1
+    param.maxmodel.prune = 1
+    param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(10),log(500), length.out = param.maxmodel.prune)))),
+                            doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.6), length.out = param.maxmodel.prune))),
                             doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = param.maxmodel.prune)))/100000)
     )
+    param.actif.prune <- 'param.prune.term_count_min'
     
     param.hngram = 2 ** 18
     param.seed = 20170416
     
     param.bench.glmnet = TRUE
     param.bench.naivebayes = FALSE
-    param.bench.xgboost = TRUE
-    param.randomForest = TRUE
+    param.bench.xgboost = FALSE
+    param.randomForest = FALSE
     param.bench.svmk = FALSE
     param.bench.nnet.multinom = FALSE
     param.bench.pcaNNet = FALSE
@@ -241,7 +243,9 @@ setwd("~/R - Phys.org")
         geom_point() + geom_smooth(span = 0.1, se = FALSE) +
         labs(x = 'Articles', y = 'F1')
       
-      bench.results %>% ggplot() +
+      bench.results %>% 
+        filter(F1 > 0.35) %>% 
+        ggplot() +
         aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
@@ -253,6 +257,11 @@ setwd("~/R - Phys.org")
         geom_point() + geom_smooth(span = 0.9, se = FALSE) +
         labs(x = 'Articles', y = 'F1')
       
+      bench.results %>% filter(Model == 'cv.glmnet') %>% 
+        ggplot() +
+        geom_point(aes(x = PRUNE_tcmi, y = F1, group = Model, fill = Category, color = Category)) + 
+        geom_smooth(aes(x = PRUNE_tcmi, y = F1, group = Model, fill = Category, color = Category), span = 0.9, se = FALSE) +
+        labs(x = 'Prune', y = 'F1') 
       
       bench.results %>% filter(Model != 'pca.neuralnet', Model != 'pcaNNet', Model != 'pca.multinom')  %>% ggplot() +
         aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
@@ -532,12 +541,19 @@ setwd("~/R - Phys.org")
           param.startmodel.prune = 1
         }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
         {
-          ## TODO les trois valeurs changent en meme temps: faire des boucles specifiques
-          ## (pout l'instant fixer manuellement à i_prune = 1 les valeurs que l'on ne veux pas faire bouger)
-          param.prune.term_count_min <<- 45 # param.prune.inc$term_count_min.inc[[i_prune]]
-          param.prune.doc_proportion_max <<- param.prune.inc$doc_proportion_max.inc[[i_prune]]
-          param.prune.doc_proportion_min <<- 0 # param.prune.inc$doc_proportion_min.inc[[i_prune]]
+
+          param.prune.term_count_min <<- ifelse(param.actif.prune != 'param.prune.term_count_min', 
+                                                param.prune.term_count_min.default, 
+                                                param.prune.inc$term_count_min.inc[[i_prune]])
           
+          param.prune.doc_proportion_max <<- ifelse(param.actif.prune != 'param.prune.doc_proportion_max', 
+                                                    param.prune.doc_proportion_max.default, 
+                                                    param.prune.inc$doc_proportion_max.inc[[i_prune]])
+          
+          param.prune.doc_proportion_min <<- ifelse(param.actif.prune != 'param.prune.doc_proportion_min', 
+                                                    param.prune.doc_proportion_min.default, 
+                                                    param.prune.inc$doc_proportion_min.inc[[i_prune]])
+
           t0 = Sys.time()
           if(param.dofeaturehashing) {
             print('FEATURE HASHING : TRUE')
@@ -873,7 +889,8 @@ setwd("~/R - Phys.org")
             save_results()
             
             print(res.confmat$overall[['Accuracy']])
-            plot(bench.randomForest_classifier)
+
+            # plot(randomForest_classifier)
           }
           
           # --------------- xgboost : plus long  resutlats egaux voire un peu meilleurs
