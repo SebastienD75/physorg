@@ -15,12 +15,12 @@ setwd("~/Dev/Git/R - Phys.org")
   suppressWarnings(suppressMessages(library(recommenderlab)))
   suppressWarnings(suppressMessages(library(tidyr)))
   suppressWarnings(suppressMessages(library(ggplot2)))
-  
 }
 
 # Find actif user data ---------------------------------------------------------------
 {
   param.lemmatized = TRUE
+  param.recommanded.real = TRUE
   param.nbmin_artcomments = 20
   # param.nbmin_usercomments = 50 #10
   # param.nbmax_usercomments = 500 #300
@@ -43,8 +43,16 @@ setwd("~/Dev/Git/R - Phys.org")
   
   d.user.actifs <- d.user
   d.user.actifs$user <- droplevels(d.user.actifs$user)
-  d.com.user.actifs <- d.com[nbarticlecomments >= param.nbmin_artcomments & 
-                               user %in% d.user.actifs$user]
+  
+  d.com.user.actifs <- d.com[nbarticlecomments >= param.nbmin_artcomments &
+                               user %in% d.user.actifs$user] %>%
+    group_by(user, url) %>%
+    summarise(n = n(), rank = mean(rank), wc = sum(wc_comment)) %>%
+    setDT
+  
+  # d.com.user.actifs <- d.com[nbarticlecomments >= param.nbmin_artcomments & 
+  #                              user %in% d.user.actifs$user]
+  
   d.com.user.actifs$user <- droplevels(d.com.user.actifs$user)
   d.art.com.user.actifs <- d.art.c.bench[url %in% d.com.user.actifs$url]
   d.art.com.user.actifs$subcategory <- droplevels(d.art.com.user.actifs$subcategory)
@@ -86,8 +94,8 @@ setwd("~/Dev/Git/R - Phys.org")
   param.dotfidf = TRUE
   param.dostem = TRUE
   param.dongram = TRUE
-  param.dofeaturehashing = FALSE # incompatible avec prune
   param.doprune = TRUE
+  param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
   param.mutate.subcat.as.cat = TRUE
@@ -141,7 +149,7 @@ setwd("~/Dev/Git/R - Phys.org")
     mutate(subcategory = droplevels(subcategory)) %>%
     setDT() %>%
     setkey(id)
-
+  
   i_cat = 1
   if(param.mutate.subcat.as.cat) {
     d.art.c.bench <- d.art.c.bench %>%
@@ -304,12 +312,183 @@ setwd("~/Dev/Git/R - Phys.org")
 
 
 {
+  # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
+  # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
+  cat('\n Recommanded sys','------------------------------------')
+  
+  param.test_useridx = 2
+  
+  pobj <- c('param.recommanded.real','afm','param.test_useridx', 'afm.bin','afm.real', 'd.recommanded.users', 'd.recommanded.bin', 'd.recommanded.real', 'd.com.user.actifs', 'd.art.c.bench.url')
+  
+  rm(list = setdiff(ls(), pobj))
+  gc()
+  
+  if(param.recommanded.real) 
+  {
+    d.recommanded.real <- d.com.user.actifs %>% 
+      left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
+      # select(user, id, rank) %>%
+      select(user, id, n) %>%
+      unique() %>%
+      group_by(user, id) %>% 
+      # summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), NA, mean(rank, na.rm = TRUE))) %>%
+      summarise(comments = ifelse(is.na(mean(n, na.rm = TRUE)), NA, mean(n, na.rm = TRUE))) %>%
+      # spread(id, comments, fill = 0, convert = TRUE) %>%
+      spread(id, comments) %>%
+      setDT
+    
+    which(d.recommanded.real[param.test_useridx,-1] != 0)
+    d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
+    
+    d.recommanded.real.mat <- as.matrix(d.recommanded.real[,2:dim(d.recommanded.real)[[2]]])
+    # d.recommanded.real.mat2[d.recommanded.real.mat2 == 0] <- NA
+    rownames(d.recommanded.real.mat) <- d.recommanded.real$user
+    
+    afm.real <- as(d.recommanded.real.mat, "realRatingMatrix")
+    
+    d.recommanded.users <- d.recommanded.real$user
+    
+    gc()
+    dim(afm.real)
+  }
+  else 
+  {
+    
+    # d.recommanded.bin <- copy(d.recommanded.real)
+    # d.recommanded.bin[!is.na(d.recommanded.bin), -1] <- 1
+    # d.recommanded.bin[!is.na(d.recommanded.bin)] <- 1
+    # d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD, 
+    #                                                             function(c) 
+    #                                                               ifelse(c == 0, 1, ifelse(is.na(c),0,1))), .SDcols = names(d.recommanded.bin[,-1])]
+    
+    d.recommanded.bin <- d.com.user.actifs %>% 
+      left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
+      select(user, id, rank) %>%
+      # select(user, id, n) %>%
+      unique() %>%
+      group_by(user, id) %>% 
+      summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), 0, 1)) %>%
+      # summarise(comments = ifelse(is.na(mean(n, na.rm = TRUE)), 0, 1)) %>%
+      spread(id, comments, fill = 0, convert = TRUE) %>%
+      setDT
+    
+    which(d.recommanded.bin[param.test_useridx,-1] != 0)
+    d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
+    
+    d.recommanded.bin.mat <- as.matrix(d.recommanded.bin[,2:dim(d.recommanded.bin)[[2]]])
+    rownames(d.recommanded.bin.mat) <- d.recommanded.bin$user
+    
+    afm.bin <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
+    
+    d.recommanded.users <- d.recommanded.bin$user
+    
+    gc()
+    dim(d.recommanded.bin)
+  }
+  
+  
+  ## ----------------
+  
+  if(param.recommanded.real) {
+    afm <- afm.real
+    
+    reco.model <- Recommender(afm,
+                              method="UBCF",
+                              param=list(normalize = "Z-score",method="Cosine",nn=5)
+    )
+    
+    summary(getRatings(afm))
+    
+    qplot(getRatings(afm), binwidth = .1, 
+          main = "Histogram of ratings", xlab = "Rating", log = 'x')
+    
+    qplot(getRatings(normalize(afm, method = "Z-score")), binwidth = .1,
+          main = "Histogram of normalized ratings", xlab = "Rating", log = 'x')
+    
+    summary(getRatings(normalize(afm, method = "Z-score")))
+    
+    
+    image(sample(afm, 1000), main = "Raw ratings")
+    
+    qplot(rowCounts(afm), binwidth = .1, 
+          main = "Document Rated on average", 
+          xlab = "# of users", 
+          ylab = "# of movies rated", 
+          log = 'x')
+    
+    qplot(colMeans(afm), binwidth = .1, 
+          main = "Mean rating of Movies", 
+          xlab = "Rating", 
+          ylab = "# of movies", xlim = c(0,25))
+    
+  }
+  else 
+  {
+    afm <- afm.bin
+    reco.model <- Recommender(afm, method = 'UBCF')
+  }
+  
+  topitems <- predict(reco.model, afm[param.test_useridx,], n=5)
+  
+  topitems
+  as(topitems, 'list')
+  
+  best3 <- bestN(topitems, n = 3)
+  best3
+  as(best3, 'list')
+  
+  
+  ## ----------------
+  
+  recommenderRegistry$get_entry_names()
+  recommenderRegistry$get_entries(dataType = "realRatingMatrix")
+  recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
+  
+  scheme <- evaluationScheme(afm, method = "split", train = .9,
+                             k = 1, given = 0, goodRating = 0)
+  
+  scheme
+  
+  algorithms <- list(
+    "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
+    "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
+    "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
+                                                   method="Cosine",
+                                                   nn=10)),
+    # "SVD" = list(name="SVD", param=list(normalize = "Z-score")),
+    "item-based CF" = list(name="IBCF", param=list())
+  )
+  
+  # run algorithms, predict next n movies
+  results <- evaluate(scheme, algorithms, n=c(1, 3, 5, 10, 15, 20))
+  
+  # Draw ROC curve
+  plot(results, annotate = 1:4, legend="topleft", ylim = c(0,0.005))
+  
+  # See precision / recall
+  plot(results, "prec/rec", annotate=3, xlim = c(0,1), ylim = c(0,1))
+  
+  # ## simple split with 3 items given
+  # esSplit <- evaluationScheme(MSWeb10, method="split",
+  #                             train = 0.9, k=1, given=3)
+  # esSplit
+  # 
+  # ## 4-fold cross-validation with all-but-1 items for learning.
+  # esCross <- evaluationScheme(MSWeb10, method="cross-validation",
+  #                             k=4, given=-1)
+  # esCross
+}
+
+
+param.statdesc = FALSE
+if(param.statdesc)
+{
   cat('\n Cosine similary','------------------------------------')
   gc()
   
   test_idx_doc = 100 
   test_url_doc = 'http://phys.org/news/2016-02-sustainability-social-important-profit.html'
-
+  
   # http://phys.org/news/2014-03-chicken-bones-true-story-pacific.html
   # http://phys.org/news/2008-08-reveals-chooks.html
   
@@ -334,7 +513,7 @@ setwd("~/Dev/Git/R - Phys.org")
     filter(between(row_number(), 2, 11)) %>%
     mutate(id_doc = as.numeric(id_doc)) %>%
     left_join(d.art.c.bench.url, by = c('id_doc' = 'id'))
- 
+  
   ## Tests url ##
   
   test_id_doc = d.art.c.bench.url[url == test_url_doc]$id
@@ -352,160 +531,3 @@ setwd("~/Dev/Git/R - Phys.org")
     mutate(id_doc = as.numeric(id_doc)) %>%
     left_join(d.art.c.bench.url, by = c('id_doc' = 'id'))
 }
-
-{
-  # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
-  # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
-  cat('\n Recommanded sys','------------------------------------')
-  
-  param.test_useridx = 2
-  
-  pobj <- c('param.test_useridx','afm.bin','afm.real','d.recommanded.users','d.recommanded.bin','d.recommanded.real', 'd.com.user.actifs', 'd.art.c.bench.url')
-  
-  rm(list = setdiff(ls(), pobj))
-  gc()
-  
-  d.recommanded.real <- d.com.user.actifs %>% 
-    left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
-    select(user, id, rank) %>%
-    unique() %>%
-    group_by(user, id) %>% 
-    summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), NA, mean(rank, na.rm = TRUE))) %>%
-    # spread(id, comments, fill = 0, convert = TRUE) %>%
-    spread(id, comments) %>%
-    setDT
-  
-  d.recommanded.users <- d.recommanded.real$user 
-  
-  which(d.recommanded.real[param.test_useridx,-1] != 0)
-  d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
-  
-  d.recommanded.real.mat <- as.matrix(d.recommanded.real[,2:dim(d.recommanded.real)[[2]]])
-  # d.recommanded.real.mat2[d.recommanded.real.mat2 == 0] <- NA
-  rownames(d.recommanded.real.mat) <- d.recommanded.real$user
-  
-  # d.recommanded.bin <- copy(d.recommanded.real)
-  # d.recommanded.bin[!is.na(d.recommanded.bin), -1] <- 1
-  # d.recommanded.bin[!is.na(d.recommanded.bin)] <- 1
-  # d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD, 
-  #                                                             function(c) 
-  #                                                               ifelse(c == 0, 1, ifelse(is.na(c),0,1))), .SDcols = names(d.recommanded.bin[,-1])]
-  
-  d.recommanded.bin <- d.com.user.actifs %>% 
-    left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
-    select(user, id, rank) %>%
-    unique() %>%
-    group_by(user, id) %>% 
-    summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), 0, 1)) %>%
-    spread(id, comments, fill = 0, convert = TRUE) %>%
-    setDT
-  
-  which(d.recommanded.bin[param.test_useridx,-1] != 0)
-  d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
-  
-  d.recommanded.bin.mat <- as.matrix(d.recommanded.bin[,2:dim(d.recommanded.bin)[[2]]])
-  rownames(d.recommanded.bin.mat) <- d.recommanded.bin$user
-  
-  gc()
-  dim(d.recommanded.bin)
-  
-  
-  ## ----------------
-  
-  
-  # recommenderRegistry$get_entry_names()
-  afm.real <- as(d.recommanded.real.mat, "realRatingMatrix")
-  afm.bin <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
-  
-  image(sample(afm.bin, 1000), main = "Raw ratings")
-  # très long, image noire 
-  # image(sample(afm.real, 500), main = "Raw ratings")
-  summary(getRatings(afm.real))
-  qplot(getRatings(afm.real), binwidth = 1, 
-        main = "Histogram of ratings", xlab = "Rating")
-  
-  qplot(getRatings(normalize(afm.real, method = "Z-score")),
-        main = "Histogram of normalized ratings", xlab = "Rating") 
-  
-  summary(getRatings(normalize(afm.real, method = "Z-score")))
-  
-  qplot(rowCounts(afm.real), binwidth = 10, 
-        main = "Document Rated on average", 
-        xlab = "# of users", 
-        ylab = "# of movies rated")
-  
-  qplot(colMeans(afm.real), binwidth = .1, 
-        main = "Mean rating of Movies", 
-        xlab = "Rating", 
-        ylab = "# of movies")
-  
-  reco.model.bin <- Recommender(afm.bin, method = 'UBCF')
-  topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
-  
-  topitems
-  as(topitems, 'list')
-  
-  best3 <- bestN(topitems, n = 3)
-  best3
-  as(best3, 'list')
-  
-  
-  reco.model.real <- Recommender(afm.real, method = 'UBCF')
-  topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
-  
-  topitems
-  as(topitems, 'list')
-  
-  
-  ## ----------------
-  
-  reco.model.real2 <- Recommender(afm.real,
-                            method="UBCF",
-                            param=list(normalize = "Z-score",method="Cosine",nn=5)
-                            )
-  
-  topitems <- predict(reco.model, afm.bin[param.test_useridx,], n=5)
-  topitems
-  as(topitems, 'list')
-  
-  ## ----------------
-  
-  recommenderRegistry$get_entries(dataType = "realRatingMatrix")
-  recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
-  
-  scheme <- evaluationScheme(afm.real, method = "split", train = .9,
-                             k = 1, given = 1, goodRating = 0)
-  
-  scheme
-  
-  algorithms <- list(
-    "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
-    "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
-    "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
-                                                   method="Cosine",
-                                                   nn=50)),
-    "item-based CF" = list(name="IBCF", param=list(normalize = "Z-score")),
-    "item-based CF" = list(name="SVD", param=list(normalize = "Z-score"))
-  )
-  
-  # run algorithms, predict next n movies
-  results <- evaluate(scheme, algorithms, n=c(1, 3, 5, 10, 15, 20))
-  
-  # Draw ROC curve
-  plot(results, annotate = 1:4, legend="topleft")
-  
-  # See precision / recall
-  plot(results, "prec/rec", annotate=3)
-  
-  # ## simple split with 3 items given
-  # esSplit <- evaluationScheme(MSWeb10, method="split",
-  #                             train = 0.9, k=1, given=3)
-  # esSplit
-  # 
-  # ## 4-fold cross-validation with all-but-1 items for learning.
-  # esCross <- evaluationScheme(MSWeb10, method="cross-validation",
-  #                             k=4, given=-1)
-  # esCross
-}
-
-
