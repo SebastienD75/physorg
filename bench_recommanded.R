@@ -24,10 +24,10 @@
   param.lemmatized = TRUE
   param.recommanded.real = FALSE
   param.nbmin_artcomments = 15
-  param.neval = c(1, 3, 5, 10, 15, 30, 80, 200)
+  param.eval.nreco = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20)
   param.nfold = 10
   param.ubcf.nn = 100
-  param.ibcf.k = 5
+  param.ibcf.k = 10
   
   param.full_subcat_sample_size <- 100
   param.clean_content.file <- 'data/physorg_bagofwords_d.art.c.bench_d.user_d.com.RData'
@@ -323,7 +323,7 @@ if(param.recommanded.user_distance)
     
   }
   
-  topitems <- predict(reco.model, afm[param.test_useridx,], n=5)
+  topitems <- predict(reco.model, afm[param.test_useridx,], n=param.ubcf.nn)
   
   topitems
   best3 <- bestN(topitems, n = 3)
@@ -339,7 +339,7 @@ if(param.recommanded.user_distance)
 
   
   # run algorithms, predict next n movies
-  results <- evaluate(scheme, algorithms, n=param.neval, keepModel = TRUE)
+  results <- evaluate(scheme, algorithms, n=param.eval.nreco, keepModel = TRUE)
   
   # Draw ROC curve
   plot(results, annotate = 1:length(algorithms), legend="topleft")
