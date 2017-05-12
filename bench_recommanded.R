@@ -19,15 +19,23 @@
 
 # Find actif user data ---------------------------------------------------------------
 {
+  param.recommanded.doc_distance = FALSE
+  param.recommanded.user_distance = TRUE
   param.lemmatized = TRUE
   param.recommanded.real = TRUE
   param.nbmin_artcomments = 15
+  param.neval = c(1, 3, 5, 10, 15, 30, 80, 200)
+  param.nfold = 10
+  param.ubcf.nn = 100
+  param.ibcf.k = 5
+  
+  param.full_subcat_sample_size <- 100
+  param.clean_content.file <- 'data/physorg_bagofwords_d.art.c.bench_d.user_d.com.RData'
+  
   # param.nbmin_usercomments = 50 #10
   # param.nbmax_usercomments = 500 #300
   # param.nbmin_userarticles = 25 #5
   # param.nbmax_userarticles = 200
-  full_subcat_sample_size <- 100
-  param.clean_content.file <- 'data/physorg_bagofwords_d.art.c.bench_d.user_d.com.RData'
   
   # d.art.c.bench <- d.art.c.bench.org
   load(param.clean_content.file)
@@ -57,8 +65,14 @@
   d.art.com.user.actifs <- d.art.c.bench[url %in% d.com.user.actifs$url]
   d.art.com.user.actifs$subcategory <- droplevels(d.art.com.user.actifs$subcategory)
   
-  # d.com.user.actifs %>% group_by(user) %>% summarise(mean_rank = mean(rank), comments = n(), wc = sum(wc_comment)) %>% arrange(-mean_rank, -comments, -wc)
-  # d.com.user.actifs %>% group_by(user) %>% summarise(comments = n(), mean_rank = mean(rank),  wc = sum(wc_comment)) %>% arrange(-comments)
+  # d.com.user.actifs %>% 
+  #   group_by(user) %>% 
+  #   summarise(mean_rank = mean(rank), comments = n(), wc = sum(wc_comment)) %>% 
+  #   arrange(-mean_rank, -comments, -wc)
+  # d.com.user.actifs %>% 
+  #   group_by(user) %>% 
+  #   summarise(comments = n(), mean_rank = mean(rank),  wc = sum(wc_comment)) %>% 
+  #   arrange(-comments)
   
   d.art.c.bench <- d.art.com.user.actifs
   
@@ -74,15 +88,15 @@
   
   d.art.c.bench.sample <- d.art.c.bench[0,]
   for(l in levels(d.art.c.bench$subcategory)) {
-    nb_lines_subcat <- min(full_subcat_sample_size, dim(d.art.c.bench[subcategory == l])[[1]])
+    nb_lines_subcat <- min(param.full_subcat_sample_size, dim(d.art.c.bench[subcategory == l])[[1]])
     sample_subcat <- sample_n(d.art.c.bench[subcategory == l], nb_lines_subcat)
     d.art.c.bench.sample <- rbind(d.art.c.bench.sample, sample_subcat)
   }
   
   rm(list = c('d.art.com.user.actifs','d.com','d.user'))
   
-  cat('\nActif users: ',dim(d.user.actifs)[[1]])
-  cat('\nDocuments of actif users: ', dim(d.art.c.bench)[[1]],'\n')
+  cat('\nActif users: ', length(unique(d.com.user.actifs$user)))
+  cat('\nDocuments of actif users: ', dim(d.art.c.bench)[[1]],'\n\n')
   
   gc()
 }
@@ -98,15 +112,16 @@
   param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
-  param.mutate.subcat.as.cat = FALSE
+  param.mutate.subcat.as.cat = TRUE
   
-  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 
+                 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
   
-  param.mutate.subcat.cat <- c('Other Sciences')
+  param.mutate.subcat.cat <- c('Earth')
   
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
-                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
-                    'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
+                    'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea',
+                    'Medicine & Health', 'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                     'Materials Science')
   
   ## -- PCT USED DATA 
@@ -115,7 +130,7 @@
   ## -- MAX DATA
   param.nblines_max.default = 1000^10
   
-  param.train_test <- 1
+  param.train_test <- 0.95
   
   ## -- PRUNE --
   param.prune.term_count_min.default = 80 
@@ -127,11 +142,6 @@
   
 }
 
-
-# FUNCTIONS  -------------------------------------------------------------------
-{
-  
-}
 
 # INIT -------------------------------------------------------------------
 
@@ -164,153 +174,9 @@
 }
 
 
-#### TFIDF
-{
-  cat('\n','------------------------------------')
-  cat('\n','Categories to learn :\n')
-  cat(paste0('<',levels(d.art.c.bench$category), '>'))
-  
-  param.pctdata <<- param.pctdata.default
-  
-  param.nblines_max <<- param.nblines_max.default
-  param.num_sample = min(param.nblines_max, ceiling(param.pctdata * dim(d.art.c.bench)[[1]]))
-  bench.all_ids = d.art.c.bench$id
-  bench.train_ids = sample(bench.all_ids, param.num_sample)
-  d.bench <- d.art.c.bench[J(bench.train_ids)] %>% 
-    mutate(category = droplevels(category)) %>% 
-    setDT()
-  
-  # SDE ?!
-  # d.bench[,id := (.I)]
-  setkey(d.bench, id)
-  
-  bench.num_sample = ceiling(param.train_test * dim(d.bench)[[1]])
-  bench.all_ids = d.bench$id
-  bench.train_ids = sample(bench.all_ids, bench.num_sample)
-  bench.test_ids = setdiff(bench.all_ids, bench.train_ids)
-  bench.train = d.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
-  bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
-  
-  gc()
-  
-  print(paste("Train nb articles =", dim(bench.train)[[1]]))
-  
-  tokenizer.stem = function(x) {
-    tokens = word_tokenizer(x)
-    lapply(tokens, SnowballC::wordStem, language="en")
-  }
-  
-  if(param.dostem) {
-    print('STEM : TRUE')
-    
-    bench.train_tokens.time <- system.time(
-      bench.train_tokens <- bench.train$content %>% tokenizer.stem
-    ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
-    
-  } else {
-    print('STEM : FALSE')
-    
-    bench.train_tokens.time <- system.time(
-      bench.train_tokens <- bench.train$content %>% word_tokenizer
-    ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
-    
-  }
-  
-  bench.it_train <- itoken(bench.train_tokens, 
-                           ids = bench.train$id,
-                           progressbar = FALSE)
-  
-  bench.it_test <- bench.test$content %>% 
-    word_tokenizer %>%
-    itoken(ids = bench.test$id, progressbar = FALSE)
-  
-  if(param.dofeaturehashing) {
-    param.doprune = FALSE
-  }
-  
-  param.prune.term_count_min <<- param.prune.term_count_min.default
-  param.prune.doc_proportion_max <<- param.prune.doc_proportion_max.default
-  param.prune.doc_proportion_min <<- param.prune.doc_proportion_min.default
-  
-  t0 = Sys.time()
-  if(param.dofeaturehashing) {
-    print('FEATURE HASHING : TRUE')
-    
-    bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
-    bench.vectorizer <- bench.h_vectorizer
-    
-    bench.dtm_train.time <- system.time(
-      bench.dtm_train<-create_dtm(bench.it_train, bench.h_vectorizer)
-    ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
-    
-    bench.dtm_test.time <- system.time(
-      bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
-    ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
-    
-    
-  } else {
-    print('FEATURE HASHING : FALSE')
-    
-    
-    if(param.dongram) {
-      print('NGRAM : TRUE')
-      
-      bench.train.vocab.stem.time <- system.time(
-        bench.train.vocab.stem<- create_vocabulary(bench.it_train, ngram = c(1L, 2L))
-      ); print(sprintf('Do ngram : bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
-      
-    } else {
-      print('NGRAM : FALSE')
-      
-      bench.train.vocab.stem.time <- system.time(
-        bench.train.vocab.stem <- create_vocabulary(bench.it_train)
-      ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
-      
-    }
-    
-    if(param.doprune) {
-      print('PRUNE : TRUE')
-      
-      
-      bench.train.vocab.stem.prune.time <- system.time(
-        bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
-                                                   term_count_min = param.prune.term_count_min,
-                                                   doc_proportion_max = param.prune.doc_proportion_max,
-                                                   doc_proportion_min = param.prune.doc_proportion_min)
-      ); print(sprintf('bench.train.vocab.stem.prune.time: %0.2fs', bench.train.vocab.stem.prune.time[[3]]))
-      
-    } else {
-      print('PRUNE : FALSE')
-    }
-    
-    bench.vectorizer <- vocab_vectorizer(bench.train.vocab.stem)
-    
-    bench.dtm_train.time <- system.time(
-      bench.dtm_train<-create_dtm(bench.it_train, bench.vectorizer)
-    ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
-    
-    bench.dtm_test.time <- system.time(
-      bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
-    ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
-  }
-  
-  
-  if(param.dotfidf) {
-    print('TFIDF : TRUE')
-    tfidf = TfIdf$new()
-    bench.dtm_train = fit_transform(bench.dtm_train, tfidf)
-    
-    # tfidf modified by fit_transform() call!
-    # apply pre-trained tf-idf transformation to test data
-    bench.dtm_test = 
-      create_dtm(bench.it_test, bench.vectorizer) %>% 
-      transform(tfidf)
-  } else {
-    print('TFIDF : FALSE')
-  }
-}
+# USER RECOMMENDATION  -------------------------------------------
 
-
+if(param.recommanded.user_distance)
 {
   # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
   # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
@@ -318,7 +184,8 @@
   
   param.test_useridx = 2
   
-  pobj <- c('param.recommanded.real','afm','param.test_useridx', 'afm.bin','afm.real', 'd.recommanded.users', 'd.recommanded.bin', 'd.recommanded.real', 'd.com.user.actifs', 'd.art.c.bench.url')
+  pobj <- c(ls()[grep('param.', ls())], 'afm','param.test_useridx', 'afm.bin','afm.real', 'd.recommanded.users', 
+            'd.recommanded.bin', 'd.recommanded.real', 'd.com.user.actifs', 'd.art.c.bench.url')
   
   rm(list = setdiff(ls(), pobj))
   gc()
@@ -337,8 +204,7 @@
       spread(id, comments) %>%
       setDT
     
-    which(d.recommanded.real[param.test_useridx,-1] != 0)
-    d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
+    d.recommanded.users <- d.recommanded.real$user
     
     d.recommanded.real.mat <- as.matrix(d.recommanded.real[,2:dim(d.recommanded.real)[[2]]])
     # d.recommanded.real.mat2[d.recommanded.real.mat2 == 0] <- NA
@@ -346,10 +212,10 @@
     
     afm.real <- as(d.recommanded.real.mat, "realRatingMatrix")
     
-    d.recommanded.users <- d.recommanded.real$user
-    
-    gc()
+    which(d.recommanded.real[param.test_useridx,-1] != 0)
+    d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
     dim(afm.real)
+    gc()
   }
   else 
   {
@@ -357,44 +223,60 @@
     # d.recommanded.bin <- copy(d.recommanded.real)
     # d.recommanded.bin[!is.na(d.recommanded.bin), -1] <- 1
     # d.recommanded.bin[!is.na(d.recommanded.bin)] <- 1
-    # d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD, 
-    #                                                             function(c) 
-    #                                                               ifelse(c == 0, 1, ifelse(is.na(c),0,1))), .SDcols = names(d.recommanded.bin[,-1])]
+    # d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD,
+    #                                                             function(c){ifelse(c == 0, 1,ifelse(is.na(c),0,1))}
+    #                                                             ), .SDcols = names(d.recommanded.bin[,-1])
+    #                   ]
     
     d.recommanded.bin <- d.com.user.actifs %>% 
       left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
-      select(user, id, rank) %>%
-      # select(user, id, n) %>%
+      # select(user, id, rank) %>%
+      select(user, id, n) %>%
       unique() %>%
       group_by(user, id) %>% 
-      summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), 0, 1)) %>%
-      # summarise(comments = ifelse(is.na(mean(n, na.rm = TRUE)), 0, 1)) %>%
+      # summarise(comments = ifelse(is.na(mean(rank, na.rm = TRUE)), 0, 1)) %>%
+      summarise(comments = ifelse(is.na(mean(n, na.rm = TRUE)), 0, 1)) %>%
       spread(id, comments, fill = 0, convert = TRUE) %>%
       setDT
     
-    which(d.recommanded.bin[param.test_useridx,-1] != 0)
-    d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
+    d.recommanded.users <- d.recommanded.bin$user
     
     d.recommanded.bin.mat <- as.matrix(d.recommanded.bin[,2:dim(d.recommanded.bin)[[2]]])
     rownames(d.recommanded.bin.mat) <- d.recommanded.bin$user
     
     afm.bin <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
     
-    d.recommanded.users <- d.recommanded.bin$user
     
-    gc()
+    which(d.recommanded.bin[param.test_useridx,-1] != 0)
+    d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
     dim(d.recommanded.bin)
+    gc()
   }
   
   
   ## ----------------
   
+  recommenderRegistry$get_entry_names()
+  recommenderRegistry$get_entries(dataType = "realRatingMatrix")
+  recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
+  
   if(param.recommanded.real) {
     afm <- afm.real
+    rm(afm.real)
     
     reco.model <- Recommender(afm,
                               method="UBCF",
                               param=list(normalize = "Z-score",method="Cosine",nn=5)
+    )
+    
+    algorithms <- list(
+      "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
+      "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
+      "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
+                                                     method="Cosine",
+                                                     nn=param.ubcf.nn)),
+      "SVD" = list(name="SVD", param=list(normalize = "Z-score")),
+      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k))
     )
     
     summary(getRatings(afm))
@@ -413,60 +295,57 @@
     qplot(rowCounts(afm), binwidth = .1, 
           main = "Document Rated on average", 
           xlab = "# of users", 
-          ylab = "# of movies rated", 
+          ylab = "# of docs rated", 
           log = 'x')
     
     qplot(colMeans(afm), binwidth = .1, 
-          main = "Mean rating of Movies", 
+          main = "Mean rating of docs", 
           xlab = "Rating", 
-          ylab = "# of movies", xlim = c(0,25))
+          ylab = "# of docs")
     
   }
   else 
   {
     afm <- afm.bin
+    rm(afm.bin)
+    
     reco.model <- Recommender(afm, method = 'UBCF')
+    
+    algorithms <- list(
+      "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
+      "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
+      "user-based CF" = list(name="UBCF", param=list(nn=param.ubcf.nn)),
+      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k))
+    )
+    
+    summary(getRatings(afm))
+    image(sample(afm, 1000), main = "Raw ratings")
+    
   }
   
   topitems <- predict(reco.model, afm[param.test_useridx,], n=5)
   
   topitems
-  as(topitems, 'list')
-  
   best3 <- bestN(topitems, n = 3)
-  best3
+  as(topitems, 'list')
   as(best3, 'list')
+
+  # scheme <- evaluationScheme(afm, method = "split", train = .7,
+  #                            k = param.nfold, given = 1, goodRating = 1)
   
-  
-  ## ----------------
-  
-  recommenderRegistry$get_entry_names()
-  recommenderRegistry$get_entries(dataType = "realRatingMatrix")
-  recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
-  
-  scheme <- evaluationScheme(afm, method = "split", train = .7,
-                             k = 1, given = 1, goodRating = 2)
-  
+  scheme <- evaluationScheme(afm, method="cross-validation",
+                              k=param.nfold, given=-1)
   scheme
-  
-  algorithms <- list(
-    "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
-    "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
-    "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
-                                                   method="Cosine",
-                                                   nn=10)),
-    "SVD" = list(name="SVD", param=list(normalize = "Z-score")),
-    "item-based CF" = list(name="IBCF", param=list())
-  )
+
   
   # run algorithms, predict next n movies
-  results <- evaluate(scheme, algorithms, n=c(1, 3, 5, 10, 15, 20, 50), keepModel = TRUE)
+  results <- evaluate(scheme, algorithms, n=param.neval, keepModel = TRUE)
   
   # Draw ROC curve
-  plot(results, annotate = 1:5, legend="topleft")
+  plot(results, annotate = 1:length(algorithms), legend="topleft")
   
   # See precision / recall
-  plot(results, "prec/rec", annotate = 1:5)
+  plot(results, "prec/rec", annotate = 1:length(algorithms))
   
   # ## simple split with 3 items given
   # esSplit <- evaluationScheme(MSWeb10, method="split",
@@ -480,9 +359,157 @@
 }
 
 
-param.statdesc = FALSE
-if(param.statdesc)
+# DISTANCE RECOMMENDATION  --------------------------------------------------------
+
+if(param.recommanded.doc_distance)
 {
+  
+  #### TFIDF
+  {
+    cat('\n','------------------------------------')
+    cat('\n','Categories to learn :\n')
+    cat(paste0('<',levels(d.art.c.bench$category), '>'))
+    
+    param.pctdata <<- param.pctdata.default
+    
+    param.nblines_max <<- param.nblines_max.default
+    param.num_sample = min(param.nblines_max, ceiling(param.pctdata * dim(d.art.c.bench)[[1]]))
+    bench.all_ids = d.art.c.bench$id
+    bench.train_ids = sample(bench.all_ids, param.num_sample)
+    d.bench <- d.art.c.bench[J(bench.train_ids)] %>% 
+      mutate(category = droplevels(category)) %>% 
+      setDT()
+    
+    # SDE ?!
+    # d.bench[,id := (.I)]
+    setkey(d.bench, id)
+    
+    bench.num_sample = ceiling(param.train_test * dim(d.bench)[[1]])
+    bench.all_ids = d.bench$id
+    bench.train_ids = sample(bench.all_ids, bench.num_sample)
+    bench.test_ids = setdiff(bench.all_ids, bench.train_ids)
+    bench.train = d.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
+    bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
+    
+    gc()
+    
+    print(paste("Train nb articles =", dim(bench.train)[[1]]))
+    
+    tokenizer.stem = function(x) {
+      tokens = word_tokenizer(x)
+      lapply(tokens, SnowballC::wordStem, language="en")
+    }
+    
+    if(param.dostem) {
+      print('STEM : TRUE')
+      
+      bench.train_tokens.time <- system.time(
+        bench.train_tokens <- bench.train$content %>% tokenizer.stem
+      ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
+      
+    } else {
+      print('STEM : FALSE')
+      
+      bench.train_tokens.time <- system.time(
+        bench.train_tokens <- bench.train$content %>% word_tokenizer
+      ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
+      
+    }
+    
+    bench.it_train <- itoken(bench.train_tokens, 
+                             ids = bench.train$id,
+                             progressbar = FALSE)
+    
+    bench.it_test <- bench.test$content %>% 
+      word_tokenizer %>%
+      itoken(ids = bench.test$id, progressbar = FALSE)
+    
+    if(param.dofeaturehashing) {
+      param.doprune = FALSE
+    }
+    
+    param.prune.term_count_min <<- param.prune.term_count_min.default
+    param.prune.doc_proportion_max <<- param.prune.doc_proportion_max.default
+    param.prune.doc_proportion_min <<- param.prune.doc_proportion_min.default
+    
+    t0 = Sys.time()
+    if(param.dofeaturehashing) {
+      print('FEATURE HASHING : TRUE')
+      
+      bench.h_vectorizer = hash_vectorizer(hash_size = param.hngram, ngram = c(1L, 2L))
+      bench.vectorizer <- bench.h_vectorizer
+      
+      bench.dtm_train.time <- system.time(
+        bench.dtm_train<-create_dtm(bench.it_train, bench.h_vectorizer)
+      ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
+      
+      bench.dtm_test.time <- system.time(
+        bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
+      ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
+      
+      
+    } else {
+      print('FEATURE HASHING : FALSE')
+      
+      
+      if(param.dongram) {
+        print('NGRAM : TRUE')
+        
+        bench.train.vocab.stem.time <- system.time(
+          bench.train.vocab.stem<- create_vocabulary(bench.it_train, ngram = c(1L, 2L))
+        ); print(sprintf('Do ngram : bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+        
+      } else {
+        print('NGRAM : FALSE')
+        
+        bench.train.vocab.stem.time <- system.time(
+          bench.train.vocab.stem <- create_vocabulary(bench.it_train)
+        ); print(sprintf('bench.train.vocab.stem.time: %0.2fs', bench.train.vocab.stem.time[[3]]))
+        
+      }
+      
+      if(param.doprune) {
+        print('PRUNE : TRUE')
+        
+        
+        bench.train.vocab.stem.prune.time <- system.time(
+          bench.train.vocab.stem <- prune_vocabulary(bench.train.vocab.stem,
+                                                     term_count_min = param.prune.term_count_min,
+                                                     doc_proportion_max = param.prune.doc_proportion_max,
+                                                     doc_proportion_min = param.prune.doc_proportion_min)
+        ); print(sprintf('bench.train.vocab.stem.prune.time: %0.2fs', bench.train.vocab.stem.prune.time[[3]]))
+        
+      } else {
+        print('PRUNE : FALSE')
+      }
+      
+      bench.vectorizer <- vocab_vectorizer(bench.train.vocab.stem)
+      
+      bench.dtm_train.time <- system.time(
+        bench.dtm_train<-create_dtm(bench.it_train, bench.vectorizer)
+      ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
+      
+      bench.dtm_test.time <- system.time(
+        bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
+      ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
+    }
+    
+    
+    if(param.dotfidf) {
+      print('TFIDF : TRUE')
+      tfidf = TfIdf$new()
+      bench.dtm_train = fit_transform(bench.dtm_train, tfidf)
+      
+      # tfidf modified by fit_transform() call!
+      # apply pre-trained tf-idf transformation to test data
+      bench.dtm_test = 
+        create_dtm(bench.it_test, bench.vectorizer) %>% 
+        transform(tfidf)
+    } else {
+      print('TFIDF : FALSE')
+    }
+  }
+  
   cat('\n Cosine similary','------------------------------------')
   gc()
   
