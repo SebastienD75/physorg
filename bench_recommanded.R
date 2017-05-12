@@ -22,7 +22,7 @@
   param.recommanded.doc_distance = FALSE
   param.recommanded.user_distance = TRUE
   param.lemmatized = TRUE
-  param.recommanded.real = TRUE
+  param.recommanded.real = FALSE
   param.nbmin_artcomments = 15
   param.neval = c(1, 3, 5, 10, 15, 30, 80, 200)
   param.nfold = 10
