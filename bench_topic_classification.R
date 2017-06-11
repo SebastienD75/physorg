@@ -178,7 +178,7 @@ setwd("~/Dev/Git/R - Phys.org")
     chk('param.doprune', TRUE, TRUE)
     
     param.dongram = FALSE
-    chk('param.dongram', FALSE, TRUE)
+    chk('param.dongram', TRUE, TRUE)
     
     param.dofeaturehashing = FALSE # incompatible avec prune
     chk('param.dofeaturehashing', FALSE)
@@ -1716,13 +1716,13 @@ setwd("~/Dev/Git/R - Phys.org")
             
           }
           
-          stopCluster(cl)
-          
           # print(difftime(Sys.time(), t0, units = 'mins'))
         }
       }
     }
   }
+  
+  stopCluster(cl)
 }
 
 
