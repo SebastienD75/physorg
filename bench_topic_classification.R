@@ -376,6 +376,12 @@ setwd("~/Dev/Git/R - Phys.org")
     
     param.seed = 20170416
     chk('param.seed', 20170416)
+    
+    print.data.frame(
+      bench.params %>% 
+        filter(runid == p.runid, default != val) %>% 
+        select(-runid)
+      )
   }
   
   
