@@ -339,7 +339,7 @@ setwd("~/Dev/Git/R - Phys.org")
     chk('param.bench.pcaNNet', FALSE, TRUE)
     
     param.bench.neuralnet = FALSE
-    chk('param.bench.neuralnet', TRUE, TRUE)
+    chk('param.bench.neuralnet', FALSE, TRUE)
     
     param.bench.pcaNNet.thresh = 0.99
     chk('param.bench.pcaNNet.thresh', 0.99)
