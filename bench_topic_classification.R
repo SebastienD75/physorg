@@ -1162,7 +1162,7 @@ setwd("~/Dev/Git/R - Phys.org")
               cv.folds = param.cv.nfold.default,
               n.cores = param.doparall.worker)
             
-            # boptlog <- gbm.perf(bench.gbm_classifier, method = 'cv')
+            boptlog <- gbm.perf(bench.gbm_classifier, method = 'cv')
             
             bench.gbm_classifier.preds  <- predict(bench.gbm_classifier, as.data.frame(as.matrix(bench.dtm_test)),n.trees = boptlog,  type="response")
             bench.gbm_classifier.preds <- apply(bench.gbm_classifier.preds, 1, which.max)
