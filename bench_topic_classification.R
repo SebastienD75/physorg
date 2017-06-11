@@ -489,11 +489,11 @@ setwd("~/Dev/Git/R - Phys.org")
       bench.results[id, "Precision"] <<- mean(res.confmat$byClass[,'Precision'])
       bench.results[id, "Recall"] <<- mean(res.confmat$byClass[,'Recall'])
       
-      bench.results[id, "F1"] <<- mean(res.confmat$byClass[,'F1'])
-      idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1'], na.rm = TRUE))
+      bench.results[id, "F1"] <<- mean(res.confmat$byClass[,'F1'], na.rm = TRUE)
+      idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1'], na.rm = TRUE))[1]
       bench.results[id, "Min F1 class"] <<- names(idx_minF1)
       bench.results[id, "Min F1 val"] <<- res.confmat$byClass[idx_minF1,'F1']
-      idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1'], na.rm = TRUE))
+      idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1'], na.rm = TRUE))[1]
       bench.results[id, "Max F1 class"] <<- names(idx_maxF1)
       bench.results[id, "Max F1 val"] <<- res.confmat$byClass[idx_maxF1,'F1']
       
