@@ -170,7 +170,7 @@ setwd("~/Dev/Git/R - Phys.org")
     chk('param.doparall.worker', detectCores() - 1)
     
     ## -- PIPLINE --
-    cat('\n', '-- Params PIPLINE --','\n')
+    # cat('\n', '-- Params PIPLINE --','\n')
     
     param.dotfidf = TRUE
     chk('param.dotfidf', TRUE, TRUE)
@@ -191,7 +191,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     
     ## -- CAT / SUB CAT --
-    cat('\n', '-- Params CAT / SUB CAT --','\n')
+    # cat('\n', '-- Params CAT / SUB CAT --','\n')
     
     param.mutate.subcat.as.cat = TRUE
     chk('param.mutate.subcat.as.cat', FALSE, TRUE)
@@ -208,7 +208,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     
     ## -- PCT USED DATA 
-    cat('\n', '-- Params PCT DATA --','\n')
+    # cat('\n', '-- Params PCT DATA --','\n')
     
     param.pctdata.default = 1
     chk('param.pctdata.default', 1)
@@ -246,7 +246,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     
     ## -- NFOLD --
-    cat('\n', '-- Params NFOLD --','\n')
+    # cat('\n', '-- Params NFOLD --','\n')
     
     param.cv.nfold.default = 3
     chk('param.cv.nfold.default', 3)
@@ -270,10 +270,10 @@ setwd("~/Dev/Git/R - Phys.org")
     
     
     ## -- PRUNE --
-    cat('\n', '-- Params PRUNE --','\n')
+    # cat('\n', '-- Params PRUNE --','\n')
 
     param.prune.term_count_min.default = 80
-    chk('param.prune.term_count_min.default', 80, TRUE)
+    chk('param.prune.term_count_min.default', 80)
     
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     chk('param.prune.doc_proportion_max.default', 1)
@@ -303,7 +303,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     
     ## -- MODELS --
-    cat('\n', '-- Params MODELS --','\n')
+    # cat('\n', '-- Params MODELS --','\n')
     
     param.evaluate_model = TRUE # TRUE par default !
     chk('param.evaluate_model', TRUE)
@@ -1304,17 +1304,39 @@ setwd("~/Dev/Git/R - Phys.org")
             cat('\n','SVM (kernlab) :\n')
             
             suppressWarnings(suppressMessages(library(kernlab)))
+            suppressWarnings(suppressMessages(library(e1071)))
             suppressWarnings(suppressMessages(library(tidyr)))
             
             gc()
             t0 = Sys.time(); 
             res.model <- 'ksvm'
-            
+
             bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train),
                                                y = bench.train[['category']],
                                                C = 5, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
-                                               prob.model=TRUE
+                                               prob.model=TRUE,
+                                               kernel = 'polydot',
+                                               type = 'C-svc',
+                                               scaled = FALSE,
+                                               cross = param.cv.nfold.default,
+                                               kpar = list(degree = 3)
             ); t1 = Sys.time()
+            
+            # bench.ksvmclass_classifier <- svm(x = as.matrix(bench.dtm_train),
+            #                                   y = bench.train[['category']],
+            #                                   cost = 5, 
+            #                                   kernel = 'polynomial',
+            #                                   degree = 3,
+            #                                   cross = param.cv.nfold.default,
+            # ); t1 = Sys.time()
+            # 
+            # 
+            # bench.ksvmclass_classifier <- ksvm(x = as.matrix(bench.dtm_train),
+            #                                    y = bench.train[['category']],
+            #                                    C = 5, # 3, # Physics => "Accuracy : 65.05 %" VS glmnet => "Accuracy : 80.03 %"
+            #                                    prob.model=TRUE
+            # ); t1 = Sys.time()
+            
             
             print(difftime(t1, t0, units = 'mins'))
             
