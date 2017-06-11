@@ -3,8 +3,8 @@
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-# setwd("~/Dev/Git/R - Phys.org")
-setwd("D:/Documents/Dev/R - Phys.org")
+setwd("~/Dev/Git/R - Phys.org")
+# setwd("D:/Documents/Dev/R - Phys.org")
 
 {
   suppressWarnings(suppressMessages(library(dplyr)))
@@ -17,18 +17,41 @@ setwd("D:/Documents/Dev/R - Phys.org")
   suppressWarnings(suppressMessages(library(text2vec)))
   suppressWarnings(suppressMessages(library(caret)))
   suppressWarnings(suppressMessages(library(tm)))
+
+  # glmnet, SnowballC, doParallel, caret, LDAvis, e1071, randomForest, xgboost, igraph, kernlab, FactoMineR, Matrix, nnet, neuralnet 
   
   # library (ROCR)
   # library(textstem)
+  
+  chk <- function(name, val_, printTRUE = FALSE) {
+    val <- ifelse(class(val_) == 'character', quote(val_), val_)
+    expr <- paste0(name, '==', val)
+    if(!eval(parse(text = expr))) {cat('=> ', name, ' != ', val_,' (current == ',eval(parse(text = name)),')', '\n',sep = "")}
+    else {if(printTRUE) cat(name, '==', val_,'\n')}
+    
+    if(!exists("bench.params")) bench.params <<- data.frame()
+    idx_param <- nrow(bench.params) + 1
+    bench.params[idx_param, 'runid'] <<- runid 
+    bench.params[idx_param, 'pname'] <<- name  
+    bench.params[idx_param, 'default'] <<- as.character(val_) 
+    bench.params[idx_param, 'val'] <<- as.character(eval(parse(text = name))) 
+  }
 }
 
 {
   # LOAD DATA ---------------------------------------------------------------
   {
-    param.lemmatized = TRUE
+    
+    runid <- round(as.numeric(Sys.time()))
+    
+    param.lemmatized = TRUE 
+    chk('param.lemmatized', TRUE, TRUE) 
+    
     param.dataorg.file <- 'data/physorg.RData'
     param.clean_content.file <- 'data/glmnet_cleancontent_catsubcat.lemmatized_full_merged_sum.RData'
+    
     full_subcat_sample_size <- 100
+    chk('full_subcat_sample_size', 100) 
     
     if(!file.exists(param.clean_content.file)) {
       load(param.dataorg.file)
@@ -112,7 +135,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
     } 
     else 
     {
-      protected.obj <- c('bench.results', 'param.clean_content.file', 'param.lemmatized')
+      protected.obj <- c('chk', 'bench.params', 'bench.results', 'param.clean_content.file', 'param.lemmatized')
       rm(list = setdiff(ls(), protected.obj))
       load(param.clean_content.file)
       
@@ -130,7 +153,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
     
-    completed.obj <- c('d.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
+    completed.obj <- c('chk', 'bench.params', 'd.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
     protected.obj <- c(completed.obj, "protected.obj", "bench.models", "bench.results", "d.art.c.bench", 'd.art.c.bench.url','param.lemmatized')
     rm(list = setdiff(ls(), protected.obj))
     # param.cleaninloop = c('d.bench', 'd.art.c.bench')
@@ -140,95 +163,229 @@ setwd("D:/Documents/Dev/R - Phys.org")
   
   # PARAMS ------------------------------------------------------------------
   {
+    runid <- round(as.numeric(Sys.time()))
     
     param.doparall.worker = 3
+    chk('param.doparall.worker', 3, TRUE)
     
     ## -- PIPLINE --
-    param.dotfidf = TRUE
+    cat('\n', '-- Params PIPLINE --','\n')
+    
+    param.dotfidf = FALSE
+    chk('param.dotfidf', TRUE, TRUE)
+    
     param.doprune = TRUE
-    param.dongram = TRUE
+    chk('param.doprune', TRUE, TRUE)
+    
+    param.dongram = FALSE
+    chk('param.dongram', FALSE, TRUE)
+    
     param.dofeaturehashing = FALSE # incompatible avec prune
+    chk('param.dofeaturehashing', FALSE)
+    
     param.dostem = FALSE
+    chk('param.dostem', FALSE)
+    
+    
+    
     
     ## -- CAT / SUB CAT --
-    param.mutate.subcat.as.cat = TRUE
-    param.mutate.subcat.cat <- c('Technology')
+    cat('\n', '-- Params CAT / SUB CAT --','\n')
+    
+    param.mutate.subcat.as.cat = FALSE
+    chk('param.mutate.subcat.as.cat', FALSE, TRUE)
+    
+    param.mutate.subcat.cat <- c('Nanotechnology')
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
                       'Ecology Biotechnology', 'Cell & Microbiology Biotechnology',
                       'Materials Science')
     
+    
+    
+    
+    
     ## -- PCT USED DATA 
+    cat('\n', '-- Params PCT DATA --','\n')
+    
     param.pctdata.default = 1
+    chk('param.pctdata.default', 1)
+    
     param.startmodel.pctdata = 1
+    chk('param.pctdata.default', 1)
+    
     param.maxmodel.pctdata = 1
+    chk('param.pctdata.default', 1)
+    
     param.pctdata.inc <- c(param.pctdata.default, 0.005, 0.01, 0.03, 0.09, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1)
     
-    ## -- MAX DATA
-
-    param.nblines_max.default = 1e10
-    param.startmodel.nblines_max = 1
-    param.maxmodel.nblines_max = 1
-    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(2000), length.out = param.maxmodel.nblines_max))))
     
-    param.train_test <- 0.7
+    
+    
+    
+    ## -- PCT DATA
+    
+    param.nblines_max.default = 1e10 # 1e10
+    chk('param.nblines_max.default', 1e10)
+    
+    param.startmodel.nblines_max = 2 # 1
+    chk('param.startmodel.nblines_max', 1)
+    
+    param.maxmodel.nblines_max = 30 # 1
+    chk('param.maxmodel.nblines_max', 1)
+    
+    param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(3000), length.out = param.maxmodel.nblines_max))))
+    # param.nblines_max.inc <- c(param.nblines_max.default, ceiling(seq(500,2000, length.out = param.maxmodel.nblines_max)))
+    
+    param.train_test <- 0.7 # ! 0.7
+    chk('param.train_test', 0.7, TRUE)
+    
+    
+    
     
     ## -- NFOLD --
+    cat('\n', '-- Params NFOLD --','\n')
+    
     param.cv.nfold.default = 3
+    chk('param.cv.nfold.default', 3)
+    
     param.startmodel.cv.nfold <- 1
+    chk('param.startmodel.cv.nfold', 1)
+    
     param.maxmodel.cv.nfold <- 1
+    chk('param.maxmodel.cv.nfold', 1)
+    
     param.cv.nfold.inc <- c(param.cv.nfold.default,4:10)
+    
     param.bench.glmnet.THRESH.default = 1e-2 # best = 1e-2 (default 1E-7)
+    chk('param.bench.glmnet.THRESH.default', 1e-2)
+    
     param.bench.glmnet.MAXIT.default =  1e2 # best = 1e2 (default 10^5)
+    chk('param.bench.glmnet.MAXIT.default', 1e2)
+    
+    
+    
+    
     
     ## -- PRUNE --
+    cat('\n', '-- Params PRUNE --','\n')
 
     param.prune.term_count_min.default = 80
+    chk('param.prune.term_count_min.default', 80, TRUE)
+    
     param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
+    chk('param.prune.doc_proportion_max.default', 1)
+    
     param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
+    chk('param.prune.doc_proportion_min.default', 0)
+    
     param.startmodel.prune = 1
+    chk('param.startmodel.prune', 1)
+    
     param.maxmodel.prune = 1
+    chk('param.maxmodel.prune', 1)
+    
     param.prune.inc <- list(term_count_min.inc = c(param.prune.term_count_min.default, ceiling(exp(seq(log(10),log(500), length.out = param.maxmodel.prune)))),
                             doc_proportion_max.inc = c(param.prune.doc_proportion_max.default, exp(seq(log(1), log(0.6), length.out = param.maxmodel.prune))),
                             doc_proportion_min.inc = c(param.prune.doc_proportion_min.default, ceiling(exp(seq(log(1), log(100), length.out = param.maxmodel.prune)))/100000)
     )
+    
     param.actif.prune <- 'param.prune.term_count_min'
+    chk('param.actif.prune', 'param.prune.term_count_min', TRUE)
     
     param.hngram = 2 ** 18
-    param.seed = 20170416
+    chk('param.hngram', 2 ** 18)
     
-    param.bench.glmnet = TRUE
+    
+    
+    
+    
+    ## -- MODELS --
+    cat('\n', '-- Params MODELS --','\n')
+    
+    param.evaluate_model = TRUE # TRUE par default !
+    chk('param.evaluate_model', TRUE)
+    
+    param.bench.glmnet = FALSE
+    chk('param.bench.glmnet', TRUE, TRUE)
+    
     param.bench.naivebayes = FALSE
+    chk('param.bench.naivebayes', FALSE, TRUE)
+    
     param.bench.xgboost = FALSE
-    param.randomForest = FALSE
+    chk('param.bench.xgboost', FALSE, TRUE)
+    
+    param.randomForest = TRUE
+    chk('param.randomForest', FALSE, TRUE)
+    
+    param.cv.randomForest = TRUE
+    chk('param.cv.randomForest', FALSE, TRUE)
+    
+    param.gbm.multinomial = TRUE
+    chk('param.gbm.multinomial', FALSE, TRUE)
+    
+    param.ntree = 150
+    chk('param.ntree', 150)
+    
     param.bench.svmk = FALSE
+    chk('param.bench.svmk', FALSE, TRUE)
+    
     param.bench.nnet.multinom = FALSE
+    chk('param.bench.nnet.multinom', FALSE, TRUE)
+    
     param.bench.pcaNNet = FALSE
+    chk('param.bench.pcaNNet', FALSE, TRUE)
+    
     param.bench.neuralnet = FALSE
+    chk('param.bench.neuralnet', TRUE, TRUE)
     
     param.bench.pcaNNet.thresh = 0.99
+    chk('param.bench.pcaNNet.thresh', 0.99)
+    
     param.bench.pcaNNet.size = 15
+    chk('param.bench.pcaNNet.size', 15)
     
     param.bench.neuralnet.size_hidden <- 20
+    chk('param.bench.neuralnet.size_hidden', 20)
+    
     param.bench.neuralnet.threshold <- 0.05
+    chk('param.bench.neuralnet.threshold', 0.05)
     
     param.pca = FALSE
+    chk('param.pca', FALSE, TRUE)
+    
     param.pca.alpha.eleastic.net = 0.5
+    chk('param.pca.alpha.eleastic.net', 0.5)
+    
     param.pca.pct_varexp = 99
+    chk('param.pca.pct_varexp', 99)
+    
     param.pca.bench.glmnet = TRUE
+    chk('param.pca.bench.glmnet', TRUE)
+    
     param.pca.bench.nnet.multinom = TRUE
+    chk('param.pca.bench.nnet.multinom', TRUE)
+    
     param.pca.bench.neuralnet = TRUE
+    chk('param.pca.bench.neuralnet', TRUE)
     
     param.lda = FALSE
+    chk('param.lda', FALSE)
+    
+    param.seed = 20170416
+    chk('param.seed', 20170416)
   }
   
   
   # FUNCTIONS  -------------------------------------------------------------------
   {
     plotresults <- function(res = bench.results)
-    {
-      ggplot(data = res) +
+    {      
+      bench.results %>% 
+        filter(Accuracy > 35) %>% 
+        filter(ceiling(10 *  Time / 60) / 10 < 20) %>% 
+        ggplot() +
         aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
         geom_line() +
         labs(x = 'Articles', y = 'Accuracy')
@@ -242,6 +399,24 @@ setwd("D:/Documents/Dev/R - Phys.org")
         aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
         geom_point() + geom_smooth(span = 0.1, se = FALSE) +
         labs(x = 'Articles', y = 'F1')
+      
+      # OK
+      bench.results %>% 
+        filter(Accuracy > 35) %>% 
+        filter(ceiling(10 *  Time / 60) / 10 < 20) %>% 
+        ggplot() +
+        aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
+        geom_line() +
+        geom_point() +
+        labs(x = 'Articles', y = 'Minutes')
+      
+      bench.results %>% 
+        filter(Accuracy > 35) %>% 
+        filter(ceiling(10 *  Time / 60) / 10 < 20) %>% 
+        ggplot() +
+        aes(x = Sample_lines, y = Accuracy, group = Model, fill = Model, color = Model) +
+        geom_smooth(span = 0.9, se = FALSE) +
+        labs(x = 'Articles', y = 'Accuracy')
       
       bench.results %>% 
         filter(F1 > 0.35) %>% 
@@ -269,9 +444,13 @@ setwd("D:/Documents/Dev/R - Phys.org")
         labs(x = 'Articles', y = 'F1')
       
       
-      bench.results %>% ggplot() +
+      bench.results %>% 
+        # filter(Model != 'pca.neuralnet', Model != 'pcaNNet', Model != 'pca.multinom') %>%
+        # filter(Model != 'pca.neuralnet', Model != 'pcaNNet') %>%
+        ggplot() +
         aes(x = Sample_lines, y = ceiling(10 *  Time / 60) / 10, group = Model, fill = Model, color = Model) +
         geom_line() +
+        geom_point() +
         labs(x = 'Articles', y = 'Minutes')
 
       bench.results %>% filter(Model != 'pca.neuralnet', Model != 'pcaNNet', Model != 'pca.multinom') %>% ggplot() +
@@ -286,8 +465,8 @@ setwd("D:/Documents/Dev/R - Phys.org")
     }
     
     num_sav <- 0
-    save_results <- function()
-    {
+    save_results <- function() {
+      
       id <- dim(bench.results)[[1]] + 1
       date.sav <- Sys.time()
       
@@ -308,15 +487,19 @@ setwd("D:/Documents/Dev/R - Phys.org")
       bench.results[id, "Balanced Accuracy"] <<- mean(res.confmat$byClass[,'Balanced Accuracy'])
       bench.results[id, "Precision"] <<- mean(res.confmat$byClass[,'Precision'])
       bench.results[id, "Recall"] <<- mean(res.confmat$byClass[,'Recall'])
+      
       bench.results[id, "F1"] <<- mean(res.confmat$byClass[,'F1'])
-      idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1']))
+      idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1'], na.rm = TRUE))
       bench.results[id, "Min F1 class"] <<- names(idx_minF1)
       bench.results[id, "Min F1 val"] <<- res.confmat$byClass[idx_minF1,'F1']
-      idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1']))
+      idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1'], na.rm = TRUE))
       bench.results[id, "Max F1 class"] <<- names(idx_maxF1)
       bench.results[id, "Max F1 val"] <<- res.confmat$byClass[idx_maxF1,'F1']
-        
+      
+      
       # bench.results[id, "Accuracy"] <<- res.accuracy
+      # bench.results[bench.results$Model == 'Randomforest',]$Accuracy <- 100*bench.results[bench.results$Model == 'Randomforest',]$Accuracy
+      
       bench.results[id, "Time"] <<- res.time
       bench.results[id, "Model"] <<- res.model
       
@@ -410,7 +593,9 @@ setwd("D:/Documents/Dev/R - Phys.org")
   
   {
     set.seed(param.seed)
-    registerDoParallel(param.doparall.worker)
+    
+    cl <- makeCluster(param.doparall.worker)
+    registerDoParallel(cl)
     
     if(!exists('bench.models')) {
       bench.models <- list()
@@ -539,7 +724,10 @@ setwd("D:/Documents/Dev/R - Phys.org")
         if(!param.doprune) {
           param.maxmodel.prune = 1
           param.startmodel.prune = 1
-        }; for(i_prune in param.startmodel.prune:param.maxmodel.prune)
+        }; 
+        
+        i_prune = param.startmodel.prune
+        for(i_prune in param.startmodel.prune:param.maxmodel.prune)
         {
 
           param.prune.term_count_min <<- ifelse(param.actif.prune != 'param.prune.term_count_min', 
@@ -633,6 +821,8 @@ setwd("D:/Documents/Dev/R - Phys.org")
             print('TFIDF : FALSE')
           }
           
+          stopifnot(param.evaluate_model)
+          
           ## --------------- GLMNET ---------------
           
           if(param.bench.glmnet) 
@@ -684,6 +874,11 @@ setwd("D:/Documents/Dev/R - Phys.org")
               # d.art.c.bench.url[id == id_doc]$url
               # d.art.c.bench[id == id_doc]$content
               
+              # protected.glmobj <- c('bench.params',"bench.dtm_train", "bench.train", "param.bench.glmnet.NFOLDS",
+              #                       "param.bench.glmnet.THRESH", "param.bench.glmnet.MAXIT",
+              #                       "bench.dtm_test","bench.test", "model_name")
+              # 
+              # rm(list = setdiff(ls(), protected.glmobj))
               
               gc()
               bench.glmnet_classifier.time <- system.time(
@@ -702,6 +897,20 @@ setwd("D:/Documents/Dev/R - Phys.org")
                                                      parallel = TRUE)
                 
               ); print(sprintf('bench.glmnet_classifier.time: %0.2fm', bench.glmnet_classifier.time[[3]]/60))
+              
+              res.coefs <- as.data.frame(as.matrix(coef(bench.glmnet_classifier)[[1]]))
+              for (ii in 2:length(names(coef(bench.glmnet_classifier)))) {
+                res.coefs <- cbind(res.coefs, as.matrix(coef(bench.glmnet_classifier)[[ii]]))
+              }
+              colnames(res.coefs) <- names(coef(bench.glmnet_classifier))
+              res.coefs$sum <- rowSums(res.coefs)
+              res.coefs.plain <- res.coefs[which(res.coefs$sum != 0),]
+              # dim(which(res.coefs$sum != 0))
+              
+              # https://stackoverflow.com/questions/27801130/extracting-coefficient-variable-names-from-glmnet-into-a-data-frame
+              # tmp_coeffs <- coef( bench.glmnet_classifier, s = "lambda.min")
+              # df_coef <- data.frame(name = tmp_coeffs@Dimnames[[1]][tmp_coeffs@i], coefficient = tmp_coeffs@x)
+              
               
               # plot(bench.glmnet_classifier)
               
@@ -872,12 +1081,12 @@ setwd("D:/Documents/Dev/R - Phys.org")
             gc()
             t0 <- Sys.time()
             res.model <- 'Randomforest'
-            
+
             bench.randomForest_classifier <- randomForest(
-              x = as.matrix(bench.dtm_train), 
+              x = as.matrix(bench.dtm_train),
               y = bench.train[['category']],
               importance = TRUE,
-              ntree = 50)
+              ntree = param.ntree)
             
             bench.randomforest.preds  <- predict(bench.randomForest_classifier, as.matrix(bench.dtm_test))
             bench.test$bench.randomForest_classifier.class <- bench.randomforest.preds
@@ -886,10 +1095,90 @@ setwd("D:/Documents/Dev/R - Phys.org")
             res.time <- difftime(tend, t0, units = 'secs')
             
             res.confmat <- confusionMatrix(bench.test$bench.randomForest_classifier.class, bench.test$category)
+            # res.accuracy <- res.confmat$overall[['Accuracy']]
+            res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.randomforest.preds]))/dim(bench.test)[[1]]
             save_results()
             
             print(res.confmat$overall[['Accuracy']])
-
+         
+            # plot(randomForest_classifier)
+          }
+          
+          if(param.cv.randomForest) {
+            cat('\n','------------------------------------')
+            cat('\n','CV Randomforest :\n')
+            
+            suppressWarnings(suppressMessages(library(caret)))
+            
+            gc()
+            t0 <- Sys.time()
+            res.model <- 'cv.Randomforest'
+            
+            bench.cv.randomForest_classifier.models <- train(
+              x = as.matrix(bench.dtm_train),
+              y = bench.train[['category']],
+              method = 'rf', ntree = param.ntree,
+              allowParallel = TRUE, 
+              trControl = trainControl(method = 'cv', number = param.cv.nfold.default)
+            )
+    
+            bench.cv.randomForest_classifier <- bench.cv.randomForest_classifier.models$finalModel
+            bench.cv.randomforest.preds  <- predict(bench.cv.randomForest_classifier, as.matrix(bench.dtm_test))
+            bench.test$bench.cv.randomForest_classifier.class <- bench.cv.randomforest.preds
+            
+            tend <- Sys.time()
+            res.time <- difftime(tend, t0, units = 'secs')
+            
+            res.confmat <- confusionMatrix(bench.test$bench.cv.randomForest_classifier.class, bench.test$category)
+            # res.accuracy <- res.confmat$overall[['Accuracy']]
+            res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.cv.randomforest.preds]))/dim(bench.test)[[1]]
+            save_results()
+            
+            print(res.confmat$overall[['Accuracy']])
+            
+            # plot(bench.cv.randomForest_classifier)
+            # rf.order <- order(importance(bench.cv.randomForest_classifier), decreasing = TRUE)
+            # colnames(bench.dtm_train)[rf.order][1:30]
+            
+          }
+          
+          if(param.gbm.multinomial) {
+            cat('\n','------------------------------------')
+            cat('\n','GBM Multinomial :\n')
+            
+            suppressWarnings(suppressMessages(library(gbm)))
+            
+            gc()
+            t0 <- Sys.time()
+            res.model <- 'gbm.multinomial'
+            
+            bench.gbm_classifier <- gbm(
+              bench.train$category ~ .,
+              data = as.data.frame(as.matrix(bench.dtm_train)),
+              distribution = 'multinomial',
+              n.trees = param.ntree,
+              interaction.depth = 1, 
+              shrinkage = 0.05,
+              cv.folds = param.cv.nfold.default,
+              n.cores = param.doparall.worker)
+            
+            # boptlog <- gbm.perf(bench.gbm_classifier, method = 'cv')
+            
+            bench.gbm_classifier.preds  <- predict(bench.gbm_classifier, as.data.frame(as.matrix(bench.dtm_test)),n.trees = boptlog,  type="response")
+            bench.gbm_classifier.preds <- apply(bench.gbm_classifier.preds, 1, which.max)
+            bench.gbm_classifier.preds <- levels(bench.train$category)[bench.gbm_classifier.preds]
+            bench.test$bench.gbm_classifier.class <- bench.gbm_classifier.preds
+            
+            tend <- Sys.time()
+            res.time <- difftime(tend, t0, units = 'secs')
+            
+            res.confmat <- confusionMatrix(bench.test$bench.gbm_classifier.class, bench.test$category)
+            # res.accuracy <- res.confmat$overall[['Accuracy']]
+            res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.gbm_classifier.preds]))/dim(bench.test)[[1]]
+            save_results()
+            
+            print(res.confmat$overall[['Accuracy']])
+            
             # plot(randomForest_classifier)
           }
           
@@ -944,9 +1233,21 @@ setwd("D:/Documents/Dev/R - Phys.org")
             xgb.nround <- 500
             bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround, verbose = 0)
             
+            # bench.cv.xgboost_classifier <- xgb.cv(data = bench.xgboost_classifier.trainmatrix,
+            #        params = xgb_params,
+            #        nrounds = xgb.nround,
+            #        verbose = 0,
+            #        nthread = param.doparall.worker,
+            #        nfold = param.doparall.worker,
+            #        # metrics = list("rmse","auc"),
+            #        # max_depth = 3, eta = 1, objective = "binary:logistic"
+            #        prediction = TRUE,
+            #        early_stopping_rounds = 5
+            #        )
+            
             # Check the feature importance
             importance_vars <- xgb.importance(model=bench.xgboost_classifier, feature_names = colnames(bench.xgboost_classifier.trainmatrix))
-            head(importance_vars, 20)
+            # head(importance_vars, 20)
             
             bench.xgboost.preds <- predict(bench.xgboost_classifier, newdata = bench.dtm_test, type = 'class')
             bench.test$bench.xgboost.preds <- levels(bench.train$category)[bench.xgboost.preds]
@@ -960,7 +1261,7 @@ setwd("D:/Documents/Dev/R - Phys.org")
             bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
             
             xgb.importance_matrix <- xgb.importance(bench.dtm_train@Dimnames[[2]], model = bench.xgboost_classifier)
-            head(xgb.importance_matrix, 20)
+            # head(xgb.importance_matrix, 20)
             
             # xgb.ggplot.importance(head(xgb.importance_matrix,20))
             # xgb.ggplot.deepness(model = bench.xgboost_classifier)
@@ -1414,6 +1715,8 @@ setwd("D:/Documents/Dev/R - Phys.org")
             
             
           }
+          
+          stopCluster(cl)
           
           # print(difftime(Sys.time(), t0, units = 'mins'))
         }
