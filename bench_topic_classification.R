@@ -1166,7 +1166,8 @@ setwd("~/Dev/Git/R - Phys.org")
             
             bench.gbm_classifier.preds  <- predict(bench.gbm_classifier, as.data.frame(as.matrix(bench.dtm_test)),n.trees = boptlog,  type="response")
             bench.gbm_classifier.preds <- apply(bench.gbm_classifier.preds, 1, which.max)
-            bench.gbm_classifier.preds <- levels(bench.train$category)[bench.gbm_classifier.preds]
+            bench.gbm_classifier.preds <- as.factor(levels(bench.train$category)[bench.gbm_classifier.preds])
+            levels(bench.gbm_classifier.preds) <- levels(bench.test$category)
             bench.test$bench.gbm_classifier.class <- bench.gbm_classifier.preds
             
             tend <- Sys.time()
