@@ -13,6 +13,7 @@ setwd("~/Dev/Git/R - Phys.org")
   suppressWarnings(suppressMessages(library(stringr)))
   suppressWarnings(suppressMessages(library(glmnet)))
   suppressWarnings(suppressMessages(library(SnowballC)))
+  suppressWarnings(suppressMessages(library(parallel)))
   suppressWarnings(suppressMessages(library(doParallel)))
   suppressWarnings(suppressMessages(library(text2vec)))
   suppressWarnings(suppressMessages(library(caret)))
@@ -165,8 +166,8 @@ setwd("~/Dev/Git/R - Phys.org")
   {
     runid <- round(as.numeric(Sys.time()))
     
-    param.doparall.worker = 3
-    chk('param.doparall.worker', 3, TRUE)
+    param.doparall.worker = detectCores() - 1
+    chk('param.doparall.worker', detectCores() - 1)
     
     ## -- PIPLINE --
     cat('\n', '-- Params PIPLINE --','\n')
