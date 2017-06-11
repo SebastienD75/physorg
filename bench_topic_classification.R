@@ -32,7 +32,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     if(!exists("bench.params")) bench.params <<- data.frame()
     idx_param <- nrow(bench.params) + 1
-    bench.params[idx_param, 'runid'] <<- runid 
+    bench.params[idx_param, 'runid'] <<- p.runid 
     bench.params[idx_param, 'pname'] <<- name  
     bench.params[idx_param, 'default'] <<- as.character(val_) 
     bench.params[idx_param, 'val'] <<- as.character(eval(parse(text = name))) 
@@ -43,7 +43,7 @@ setwd("~/Dev/Git/R - Phys.org")
   # LOAD DATA ---------------------------------------------------------------
   {
     
-    runid <- round(as.numeric(Sys.time()))
+    p.runid <- round(as.numeric(Sys.time()))
     
     param.lemmatized = TRUE 
     chk('param.lemmatized', TRUE, TRUE) 
@@ -164,7 +164,7 @@ setwd("~/Dev/Git/R - Phys.org")
   
   # PARAMS ------------------------------------------------------------------
   {
-    runid <- round(as.numeric(Sys.time()))
+    p.runid <- round(as.numeric(Sys.time()))
     
     param.doparall.worker = detectCores() - 1
     chk('param.doparall.worker', detectCores() - 1)
