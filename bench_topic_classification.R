@@ -178,7 +178,7 @@ setwd("~/Dev/Git/R - Phys.org")
     param.doprune = TRUE
     chk('param.doprune', TRUE, TRUE)
     
-    param.dongram = FALSE
+    param.dongram = TRUE
     chk('param.dongram', TRUE, TRUE)
     
     param.dofeaturehashing = FALSE # incompatible avec prune
@@ -196,7 +196,7 @@ setwd("~/Dev/Git/R - Phys.org")
     param.mutate.subcat.as.cat = TRUE
     chk('param.mutate.subcat.as.cat', FALSE, TRUE)
     
-    param.mutate.subcat.cat <- c('Other Sciences', 'Astronomy & Space')
+    param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -293,7 +293,7 @@ setwd("~/Dev/Git/R - Phys.org")
     )
     
     param.actif.prune <- 'param.prune.term_count_min'
-    chk('param.actif.prune', 'param.prune.term_count_min', TRUE)
+    chk('param.actif.prune', 'param.prune.term_count_min')
     
     param.hngram = 2 ** 18
     chk('param.hngram', 2 ** 18)
