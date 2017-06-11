@@ -28,7 +28,7 @@ setwd("~/Dev/Git/R - Phys.org")
     val <- ifelse(class(val_) == 'character', quote(val_), val_)
     expr <- paste0(name, '==', val)
     if(!eval(parse(text = expr))) {cat('=> ', name, ' != ', val_,' (current == ',eval(parse(text = name)),')', '\n',sep = "")}
-    else {if(printTRUE) cat(name, '==', val_,'\n')}
+    else {if(printTRUE) cat('   ', name, '==', val_,'\n')}
     
     if(!exists("bench.params")) bench.params <<- data.frame()
     idx_param <- nrow(bench.params) + 1
@@ -172,7 +172,7 @@ setwd("~/Dev/Git/R - Phys.org")
     ## -- PIPLINE --
     cat('\n', '-- Params PIPLINE --','\n')
     
-    param.dotfidf = FALSE
+    param.dotfidf = TRUE
     chk('param.dotfidf', TRUE, TRUE)
     
     param.doprune = TRUE
@@ -193,10 +193,10 @@ setwd("~/Dev/Git/R - Phys.org")
     ## -- CAT / SUB CAT --
     cat('\n', '-- Params CAT / SUB CAT --','\n')
     
-    param.mutate.subcat.as.cat = FALSE
+    param.mutate.subcat.as.cat = TRUE
     chk('param.mutate.subcat.as.cat', FALSE, TRUE)
     
-    param.mutate.subcat.cat <- c('Nanotechnology')
+    param.mutate.subcat.cat <- c('Other Sciences', 'Astronomy & Space')
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -230,10 +230,10 @@ setwd("~/Dev/Git/R - Phys.org")
     param.nblines_max.default = 1e10 # 1e10
     chk('param.nblines_max.default', 1e10)
     
-    param.startmodel.nblines_max = 2 # 1
+    param.startmodel.nblines_max = 1 # 2
     chk('param.startmodel.nblines_max', 1)
     
-    param.maxmodel.nblines_max = 30 # 1
+    param.maxmodel.nblines_max = 1 # 30
     chk('param.maxmodel.nblines_max', 1)
     
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(3000), length.out = param.maxmodel.nblines_max))))
@@ -308,38 +308,38 @@ setwd("~/Dev/Git/R - Phys.org")
     param.evaluate_model = TRUE # TRUE par default !
     chk('param.evaluate_model', TRUE)
     
-    param.bench.glmnet = FALSE
+    param.bench.glmnet = TRUE
     chk('param.bench.glmnet', TRUE, TRUE)
     
     param.bench.naivebayes = FALSE
-    chk('param.bench.naivebayes', FALSE, TRUE)
+    chk('param.bench.naivebayes', FALSE)
     
     param.bench.xgboost = FALSE
-    chk('param.bench.xgboost', FALSE, TRUE)
+    chk('param.bench.xgboost', FALSE)
     
-    param.randomForest = TRUE
-    chk('param.randomForest', FALSE, TRUE)
+    param.randomForest = FALSE
+    chk('param.randomForest', FALSE)
     
-    param.cv.randomForest = TRUE
-    chk('param.cv.randomForest', FALSE, TRUE)
+    param.cv.randomForest = FALSE
+    chk('param.cv.randomForest', FALSE)
     
-    param.gbm.multinomial = TRUE
-    chk('param.gbm.multinomial', FALSE, TRUE)
+    param.gbm.multinomial = FALSE
+    chk('param.gbm.multinomial', FALSE)
     
     param.ntree = 150
     chk('param.ntree', 150)
     
     param.bench.svmk = FALSE
-    chk('param.bench.svmk', FALSE, TRUE)
+    chk('param.bench.svmk', FALSE)
     
     param.bench.nnet.multinom = FALSE
-    chk('param.bench.nnet.multinom', FALSE, TRUE)
+    chk('param.bench.nnet.multinom', FALSE)
     
     param.bench.pcaNNet = FALSE
-    chk('param.bench.pcaNNet', FALSE, TRUE)
+    chk('param.bench.pcaNNet', FALSE)
     
     param.bench.neuralnet = FALSE
-    chk('param.bench.neuralnet', FALSE, TRUE)
+    chk('param.bench.neuralnet', FALSE)
     
     param.bench.pcaNNet.thresh = 0.99
     chk('param.bench.pcaNNet.thresh', 0.99)
@@ -354,7 +354,7 @@ setwd("~/Dev/Git/R - Phys.org")
     chk('param.bench.neuralnet.threshold', 0.05)
     
     param.pca = FALSE
-    chk('param.pca', FALSE, TRUE)
+    chk('param.pca', FALSE)
     
     param.pca.alpha.eleastic.net = 0.5
     chk('param.pca.alpha.eleastic.net', 0.5)
@@ -362,14 +362,14 @@ setwd("~/Dev/Git/R - Phys.org")
     param.pca.pct_varexp = 99
     chk('param.pca.pct_varexp', 99)
     
-    param.pca.bench.glmnet = TRUE
-    chk('param.pca.bench.glmnet', TRUE)
+    param.pca.bench.glmnet = FALSE
+    chk('param.pca.bench.glmnet', FALSE)
     
-    param.pca.bench.nnet.multinom = TRUE
-    chk('param.pca.bench.nnet.multinom', TRUE)
+    param.pca.bench.nnet.multinom = FALSE
+    chk('param.pca.bench.nnet.multinom', FALSE)
     
-    param.pca.bench.neuralnet = TRUE
-    chk('param.pca.bench.neuralnet', TRUE)
+    param.pca.bench.neuralnet = FALSE
+    chk('param.pca.bench.neuralnet', FALSE)
     
     param.lda = FALSE
     chk('param.lda', FALSE)
@@ -491,21 +491,34 @@ setwd("~/Dev/Git/R - Phys.org")
       # cm$byClass
       bench.results[id, "Accuracy"] <<- res.confmat$overall[['Accuracy']]
       bench.results[id, "AccuracyPValue"] <<- res.confmat$overall[['AccuracyPValue']]
-      bench.results[id, "Balanced Accuracy"] <<- mean(res.confmat$byClass[,'Balanced Accuracy'])
-      bench.results[id, "Precision"] <<- mean(res.confmat$byClass[,'Precision'])
-      bench.results[id, "Recall"] <<- mean(res.confmat$byClass[,'Recall'])
       
-      bench.results[id, "F1"] <<- mean(res.confmat$byClass[,'F1'], na.rm = TRUE)
-      idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1'], na.rm = TRUE))[1]
-      bench.results[id, "Min F1 class"] <<- names(idx_minF1)
-      bench.results[id, "Min F1 val"] <<- res.confmat$byClass[idx_minF1,'F1']
-      idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1'], na.rm = TRUE))[1]
-      bench.results[id, "Max F1 class"] <<- names(idx_maxF1)
-      bench.results[id, "Max F1 val"] <<- res.confmat$byClass[idx_maxF1,'F1']
+      if(class(res.confmat$byClass) == 'matrix') {
+        bench.results[id, "Balanced Accuracy"] <<- mean(res.confmat$byClass[,'Balanced Accuracy'])
+        bench.results[id, "Precision"] <<- mean(res.confmat$byClass[,'Precision'])
+        bench.results[id, "Recall"] <<- mean(res.confmat$byClass[,'Recall'])
+        bench.results[id, "F1"] <<- mean(res.confmat$byClass[,'F1'], na.rm = TRUE)
+        idx_minF1 <- which(res.confmat$byClass[,'F1'] == min(res.confmat$byClass[,'F1'], na.rm = TRUE))[1]
+        bench.results[id, "Min F1 class"] <<- names(idx_minF1)
+        bench.results[id, "Min F1 val"] <<- res.confmat$byClass[idx_minF1,'F1']
+        idx_maxF1 <- which(res.confmat$byClass[,'F1'] == max(res.confmat$byClass[,'F1'], na.rm = TRUE))[1]
+        bench.results[id, "Max F1 class"] <<- names(idx_maxF1)
+        bench.results[id, "Max F1 val"] <<- res.confmat$byClass[idx_maxF1,'F1']
+      } else {
+        bench.results[id, "Balanced Accuracy"] <<- mean(res.confmat$byClass['Balanced Accuracy'])
+        bench.results[id, "Precision"] <<- mean(res.confmat$byClass['Precision'])
+        bench.results[id, "Recall"] <<- mean(res.confmat$byClass['Recall'])
+        bench.results[id, "F1"] <<- mean(res.confmat$byClass['F1'], na.rm = TRUE)
+        idx_minF1 <- which(res.confmat$byClass['F1'] == min(res.confmat$byClass['F1'], na.rm = TRUE))[1]
+        bench.results[id, "Min F1 class"] <<- idx_minF1
+        bench.results[id, "Min F1 val"] <<- res.confmat$byClass['F1']
+        idx_maxF1 <- which(res.confmat$byClass['F1'] == max(res.confmat$byClass['F1'], na.rm = TRUE))[1]
+        bench.results[id, "Max F1 class"] <<- idx_maxF1
+        bench.results[id, "Max F1 val"] <<- res.confmat$byClass['F1']
+      }
       
       
       # bench.results[id, "Accuracy"] <<- res.accuracy
-      # bench.results[bench.results$Model == 'Randomforest',]$Accuracy <- 100*bench.results[bench.results$Model == 'Randomforest',]$Accuracy
+      # bench.results[bench.results$Session == 14971918699,]$Accuracy  <- 100*bench.results[bench.results$Session == 14971918699,]$Accuracy
       
       bench.results[id, "Time"] <<- res.time
       bench.results[id, "Model"] <<- res.model
@@ -845,6 +858,7 @@ setwd("~/Dev/Git/R - Phys.org")
             t0 <- Sys.time()
             res.model <- 'cv.glmnet'
             
+            i_nfold <- param.startmodel.cv.nfold
             for(i_nfold in param.startmodel.cv.nfold:param.maxmodel.cv.nfold)
             {
               param.bench.glmnet.NFOLDS <<- param.cv.nfold.inc[[i_nfold]]
