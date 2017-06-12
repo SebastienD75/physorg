@@ -294,7 +294,7 @@
     )
     
     param.actif.prune <- 'param.prune.term_count_min'
-    chk('param.actif.prune', 'param.prune.term_count_min', TRUE)
+    chk('param.actif.prune', 'param.prune.term_count_min')
     
     param.hngram = 2 ** 18
     chk('param.hngram', 2 ** 18)
