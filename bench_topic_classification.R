@@ -3,7 +3,7 @@
 ####################################################
 ## Script created by Sébastien Desfossés (2017/04)
 
-setwd("~/Dev/Git/R - Phys.org")
+# setwd("~/Dev/Git/R - Phys.org")
 # setwd("D:/Documents/Dev/R - Phys.org")
 
 {
@@ -108,6 +108,7 @@ setwd("~/Dev/Git/R - Phys.org")
          # str_replace_all(' - ', ' ')
       }
       
+      
       d.user.actifs <- d.user[nbcom>2 & nbart>2]
       d.com.user.actifs <- d.com[user %in% d.user.actifs$user]
       # d.com.user.actifs %>% group_by(user) %>% summarise(mean_rank = mean(rank), comments = n(), wc = sum(wc_comment)) %>% arrange(-mean_rank, -comments, -wc)
@@ -136,7 +137,7 @@ setwd("~/Dev/Git/R - Phys.org")
     } 
     else 
     {
-      protected.obj <- c('chk', 'bench.params', 'bench.results', 'param.clean_content.file', 'param.lemmatized')
+      protected.obj <- c('bench.glmnet_classifier','chk', 'bench.params', 'bench.results', 'param.clean_content.file', 'param.lemmatized')
       rm(list = setdiff(ls(), protected.obj))
       load(param.clean_content.file)
       
@@ -154,7 +155,7 @@ setwd("~/Dev/Git/R - Phys.org")
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
     
-    completed.obj <- c('chk', 'bench.params', 'd.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
+    completed.obj <- c('bench.glmnet_classifier','chk', 'bench.params', 'd.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
     protected.obj <- c(completed.obj, "protected.obj", "bench.models", "bench.results", "d.art.c.bench", 'd.art.c.bench.url','param.lemmatized')
     rm(list = setdiff(ls(), protected.obj))
     # param.cleaninloop = c('d.bench', 'd.art.c.bench')
@@ -178,7 +179,7 @@ setwd("~/Dev/Git/R - Phys.org")
     param.doprune = TRUE
     chk('param.doprune', TRUE, TRUE)
     
-    param.dongram = FALSE
+    param.dongram = TRUE
     chk('param.dongram', TRUE, TRUE)
     
     param.dofeaturehashing = FALSE # incompatible avec prune
@@ -193,10 +194,10 @@ setwd("~/Dev/Git/R - Phys.org")
     ## -- CAT / SUB CAT --
     # cat('\n', '-- Params CAT / SUB CAT --','\n')
     
-    param.mutate.subcat.as.cat = TRUE
+    param.mutate.subcat.as.cat = FALSE
     chk('param.mutate.subcat.as.cat', FALSE, TRUE)
     
-    param.mutate.subcat.cat <- c('Other Sciences', 'Astronomy & Space')
+    param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -272,13 +273,13 @@ setwd("~/Dev/Git/R - Phys.org")
     ## -- PRUNE --
     # cat('\n', '-- Params PRUNE --','\n')
 
-    param.prune.term_count_min.default = 80
+    param.prune.term_count_min.default = 200
     chk('param.prune.term_count_min.default', 80)
     
-    param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
+    param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
     chk('param.prune.doc_proportion_max.default', 1)
     
-    param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
+    param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
     chk('param.prune.doc_proportion_min.default', 0)
     
     param.startmodel.prune = 1
@@ -387,6 +388,55 @@ setwd("~/Dev/Git/R - Phys.org")
   
   # FUNCTIONS  -------------------------------------------------------------------
   {
+    # protected.model.obj <- c('bench.glmnet_classifier','docpred_dtm', 'tfidf', 'model', 'bench.vectorizer')
+    # rm(list = setdiff(ls(), protected.model.obj))
+    
+    dtm_from_words <- function(str_to_convert) {
+      library(textstem)
+      
+      content_df <- data.frame(content = str_to_convert) %>%
+        mutate(content = str_replace_all(content, "\\s*'\\B|\\B'\\s*", "")) %>%
+        # suppression des - qui ne sont pas dans des mots
+        mutate(content = str_replace_all(content, "\\s*-\\B|\\B-\\s*", "")) %>%
+        # suppression de tout ce qui n'est pas lettre ou ' ou - remplaces par espace
+        # les mots avec "-" posent problemes apres lematization ils se transforment en '<> - <>'
+        mutate(content = str_replace_all(content, "[^[A-Za-z]'-]", " ")) %>%
+        # suppression des mots de une ou deux lettres remplaces par espace
+        mutate(content = str_replace_all(content, " *\\b[[:alpha:]]{1,2}\\b *", " ")) %>%
+        # transformation en minuscule
+        mutate(content = str_to_lower(content)) %>%
+        # suppressoin des stop words
+        mutate(content = removeWords(content, stopwords())) %>%
+        # suppression des espaces en trop
+        mutate(content = stripWhitespace(content)) %>%
+        mutate(content = lemmatize_strings(content)) %>%
+        mutate(content = removeWords(content, c('category','can','say', 'will', 'use')))
+      
+      
+      # a sauvegarder : bench.dtm_test vide, tfidf, model, bench.vectorizer
+      content_tokens <- content_df$content %>% word_tokenizer
+      
+      content_it_tokens <- itoken(content_tokens,ids = 1,progressbar = FALSE)
+      
+      # content_vocab <- create_vocabulary(content_it_tokens, ngram = c(1L, 2L))
+      
+      # content_vectorizer <- vocab_vectorizer(content_vocab)
+      
+      content_dtm <- create_dtm(content_it_tokens, bench.vectorizer) %>% transform(tfidf)
+      
+      # content_tfidf_dtm <- fit_transform(content_dtm, tfidf)
+      
+      # t.dtm_to_pred <- dtm_from_words(bench.test[1,]$content)
+      # t.dtm_to_pred <- dtm_from_words(t.str)
+      # docpred_dtm <- bench.dtm_test[0,]
+      # docpred_dtm <- rbind(docpred_dtm, rep(0,dim(docpred_dtm)[2]))
+      # t.idx_cols <- which(colnames(docpred_dtm) %in% colnames(t.dtm_to_pred))
+      # docpred_dtm[1,t.idx_cols] <- t.dtm_to_pred[1,colnames(docpred_dtm)[t.idx_cols]]
+      # t.pred <- predict(bench.glmnet_classifier, docpred_dtm, s = "lambda.min", type = 'class')
+      # t.pred <- droplevels(t.pred)
+      # t.pred
+    }
+    
     plotresults <- function(res = bench.results)
     {      
       bench.results %>% 
@@ -432,7 +482,7 @@ setwd("~/Dev/Git/R - Phys.org")
         geom_line() +
         labs(x = 'Articles', y = 'Minutes')
       
-      # rm(list = setdiff(ls(), c('bench.results')))
+      # rm(list = setdiff(ls(), c('results.bench.models.accuaracy', 'params.bench.models.accuaracy')))
       
       bench.results %>% ggplot() +
         aes(x = Sample_lines, y = F1, group = Model, fill = Model, color = Model) +
@@ -486,8 +536,7 @@ setwd("~/Dev/Git/R - Phys.org")
       bench.results[id, "Worker"] <<- param.doparall.worker
       bench.results[id, "Issc"] <<- param.mutate.subcat.as.cat
       
-      bench.results[id, "Category"] <<- param.cat[i_cat]
-      
+      bench.results[id, "Category"] <<- t.current.cat
       # cm$byClass
       bench.results[id, "Accuracy"] <<- res.confmat$overall[['Accuracy']]
       bench.results[id, "AccuracyPValue"] <<- res.confmat$overall[['AccuracyPValue']]
@@ -666,6 +715,12 @@ setwd("~/Dev/Git/R - Phys.org")
         setkey(id)
     }
     
+    if(param.mutate.subcat.as.cat) {
+      t.current.cat <<- param.cat[i_cat]
+    } else {
+      t.current.cat <<- 'All'
+    }
+    
     cat('\n','------------------------------------')
     cat('\n','Categories to learn :\n')
     cat(paste0('<',levels(d.art.c.bench$category), '>'))
@@ -728,7 +783,7 @@ setwd("~/Dev/Git/R - Phys.org")
           ); print(sprintf('bench.train_tokens.time: %0.2fs', bench.train_tokens.time[[3]]))
           
         }
-        
+
         bench.it_train <- itoken(bench.train_tokens, 
                                  ids = bench.train$id,
                                  progressbar = FALSE)
@@ -780,7 +835,6 @@ setwd("~/Dev/Git/R - Phys.org")
             
           } else {
             print('FEATURE HASHING : FALSE')
-            
             
             if(param.dongram) {
               print('NGRAM : TRUE')
@@ -837,10 +891,12 @@ setwd("~/Dev/Git/R - Phys.org")
             bench.dtm_test = 
               create_dtm(bench.it_test, bench.vectorizer) %>% 
               transform(tfidf)
+            
           } else {
             print('TFIDF : FALSE')
           }
           
+          docpred_dtm <- bench.dtm_test[0,]
           stopifnot(param.evaluate_model)
           
           ## --------------- GLMNET ---------------
@@ -1643,7 +1699,7 @@ setwd("~/Dev/Git/R - Phys.org")
             
             gc()
             t0 <- Sys.time()
-            res.model <- 'multinom'
+            res.model <- 'nnet.multinom'
             
             nnet.size <- nlevels( bench.train[['category']]) # 7
             
