@@ -25,22 +25,31 @@
   param.recommanded.real = FALSE
   param.remmender.evaluation = FALSE
   
-  param.cat <- c('Astronomy & Space', 'Earth', 'Technology')
+  # param.cat <- c('Astronomy & Space', 'Earth', 'Technology')
+  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics',
+                 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
   
   # param.nbmin_artcomments = 10
+  # all_cat ?
   # > dim(d.recommanded.bin)
   # [1] 9124 7949
   
-  param.nbmin_artcomments = 2
+  # param.nbmin_artcomments = 5
+  # all_cat ?
   # > dim(d.recommanded.bin)
   # [1] 10537 14003
+  
+  param.nbmin_artcomments = 3
+  # all_cat !
+  # > dim(afm)
+  # [1] 18039 34183
   
   param.eval.nreco = c(1, 2, 3, 4, 5, 8, 12)
   param.nfold = 5
   param.ubcf.nn = 50
   param.ibcf.k = 5
   
-  param.full_subcat_sample_size <- 100
+  # param.full_subcat_sample_size <- 100
   param.clean_content.file <- 'data/physorg_bagofwords_d.art.c.bench_d.user_d.com.RData'
   load(param.clean_content.file)
   
@@ -48,6 +57,14 @@
   # param.nbmax_usercomments = 500 #300
   # param.nbmin_userarticles = 25 #5
   # param.nbmax_userarticles = 200
+  
+  afm.img.name <- paste0('data/recommender.matrix_bin.', 
+                     !param.recommanded.real, 
+                     '_mincom.',
+                     param.nbmin_artcomments,
+                     '_cat-', 
+                     paste(substr(param.cat, 1, 3), collapse = '.'), 
+                     '.png')
   
   qplot(d.com$nbarticlecomments, geom='histogram', bins = 100, xlim = c(5,300))
   
@@ -129,7 +146,6 @@
   
   # param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics',
   #                'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
-  param.cat <- c('Astronomy & Space', 'Earth', 'Technology')
   
   param.mutate.subcat.cat <- c('Astronomy & Space', 'Earth', 'Technology')
   
@@ -194,13 +210,11 @@ if(param.recommanded.user_distance){
   
   # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
   # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
+  
   cat('\n Recommanded sys','------------------------------------')
-  
   param.test_useridx = 2
-  
   pobj <- c(ls()[grep('param.', ls())], 'afm','param.test_useridx', 'afm.bin','afm.real', 'd.recommanded.users', 
             'd.recommanded.bin', 'd.recommanded.real', 'd.com.user.actifs', 'd.art.c.bench.url')
-  
   rm(list = setdiff(ls(), pobj))
   gc()
   
@@ -218,18 +232,19 @@ if(param.recommanded.user_distance){
       spread(id, comments) %>%
       setDT
     
-    d.recommanded.users <- d.recommanded.real$user
+    # d.recommanded.users <- d.recommanded.real$user
     
     d.recommanded.real.mat <- as.matrix(d.recommanded.real[,2:dim(d.recommanded.real)[[2]]])
     # d.recommanded.real.mat2[d.recommanded.real.mat2 == 0] <- NA
     rownames(d.recommanded.real.mat) <- d.recommanded.real$user
     
-    afm.real <- as(d.recommanded.real.mat, "realRatingMatrix")
-    
-    which(d.recommanded.real[param.test_useridx,-1] != 0)
-    d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
-    dim(afm.real)
+    afm <- as(d.recommanded.real.mat, "realRatingMatrix")    
+    rm(d.recommanded.real.mat)
     gc()
+    
+    # which(d.recommanded.real[param.test_useridx,-1] != 0)
+    # d.recommanded.real[param.test_useridx, 1 + which(d.recommanded.real[param.test_useridx,-1] != 0), with = FALSE]
+
   }
   else 
   {
@@ -239,8 +254,7 @@ if(param.recommanded.user_distance){
     # d.recommanded.bin[!is.na(d.recommanded.bin)] <- 1
     # d.recommanded.bin[, (names(d.recommanded.bin[,-1])):=lapply(.SD,
     #                                                             function(c){ifelse(c == 0, 1,ifelse(is.na(c),0,1))}
-    #                                                             ), .SDcols = names(d.recommanded.bin[,-1])
-    #                   ]
+    #                                                             ), .SDcols = names(d.recommanded.bin[,-1])]
     
     d.recommanded.bin <- d.com.user.actifs %>% 
       left_join(d.art.c.bench.url[,c('url', 'id')]) %>% 
@@ -253,20 +267,29 @@ if(param.recommanded.user_distance){
       spread(id, comments, fill = 0, convert = TRUE) %>%
       setDT
     
-    d.recommanded.users <- d.recommanded.bin$user
+    # d.recommanded.users <- d.recommanded.bin$user
     
     d.recommanded.bin.mat <- as.matrix(d.recommanded.bin[,2:dim(d.recommanded.bin)[[2]]])
     rownames(d.recommanded.bin.mat) <- d.recommanded.bin$user
     
-    afm.bin <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
+    # rm(list = ls()[!grepl("d.recommanded.bin.mat",ls())])
+    # rm(list = setdiff(ls(), c('d.recommanded.bin.mat','afm.img.name')))
+    # gc()
+    afm <- as(d.recommanded.bin.mat, "binaryRatingMatrix")
+    rm(d.recommanded.bin.mat)
+       
     
-    
-    which(d.recommanded.bin[param.test_useridx,-1] != 0)
-    d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
-    dim(d.recommanded.bin)
-    gc()
+    # which(d.recommanded.bin[param.test_useridx,-1] != 0)
+    # d.recommanded.bin[param.test_useridx, 1 + which(d.recommanded.bin[param.test_useridx,-1] != 0), with = FALSE]
+
   }
   
+  gc()
+  dim(afm)
+  png(filename=afm.img.name)
+  # image(sample(afm, 1000), main = "Raw ratings")
+  image(afm, main = "Raw ratings")
+  dev.off()
   
   ## ----------------
   
@@ -274,15 +297,8 @@ if(param.recommanded.user_distance){
   recommenderRegistry$get_entries(dataType = "realRatingMatrix")
   recommenderRegistry$get_entries(dataType = "binaryRatingMatrix")
   
-  if(param.recommanded.real) {
-    afm <- afm.real
-    rm(afm.real)
-    
-    
-    png(filename="data/recommanded_real_matrix.png")
-    # image(sample(afm, 1000), main = "Raw ratings")
-    image(afm, main = "Raw ratings")
-    dev.off()
+  if(param.recommanded.real) 
+  {
     reco.model <- Recommender(afm,
                               method="UBCF",
                               param=list(normalize = "Z-score",method="Cosine",nn=5)
@@ -301,8 +317,6 @@ if(param.recommanded.user_distance){
     # scheme <- evaluationScheme(afm, method = "split", train = .7,
     #                            k = param.nfold, given = 1, goodRating = 1)
     
-    
-    
     scheme <- evaluationScheme(afm, method="cross-validation", goodRating = 0.01,
                                k=param.nfold, given=-1)
     scheme
@@ -316,7 +330,7 @@ if(param.recommanded.user_distance){
           main = "Histogram of normalized ratings", xlab = "Rating", log = 'x')
     
     summary(getRatings(normalize(afm, method = "Z-score")))
-
+    
     
     qplot(rowCounts(afm), binwidth = .1, 
           main = "Document Rated on average", 
@@ -332,19 +346,12 @@ if(param.recommanded.user_distance){
   }
   else 
   {
-    afm <- afm.bin
-    rm(afm.bin)
-    
-    png(filename="data/recommanded_bin_matrix.png")
-    # image(sample(afm, 1000), main = "Raw ratings")
-    image(afm, main = "Raw ratings")
-    dev.off()
     
     algorithms <- list(
-      # "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k)),
+      # "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k)),,
+      "user-based CF" = list(name="UBCF", param=list(nn=param.ubcf.nn)),
       "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
-      "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
-      "user-based CF" = list(name="UBCF", param=list(nn=param.ubcf.nn))
+      "popular items" = list(name="POPULAR", param=list(normalize = "Z-score"))
     )
     
     # ## simple split with 3 items given
@@ -357,8 +364,6 @@ if(param.recommanded.user_distance){
     
     scheme <- evaluationScheme(afm, method="cross-validation",
                                k=param.nfold, given=-1)
-
-    
   }
   
   if(param.remmender.evaluation) {
