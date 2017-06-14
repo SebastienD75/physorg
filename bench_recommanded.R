@@ -379,11 +379,11 @@ if(param.recommanded.user_distance){
   } 
   
   reco.model <- Recommender(afm, method = 'UBCF')
-  topitems <- predict(reco.model, afm[param.test_useridx,], n=param.ubcf.nn)
-  topitems
-  best3 <- bestN(topitems, n = 3)
-  as(topitems, 'list')
-  as(best3, 'list')
+  # topitems <- predict(reco.model, afm[param.test_useridx,], n=param.ubcf.nn)
+  # topitems
+  # best3 <- bestN(topitems, n = 3)
+  # as(topitems, 'list')
+  # as(best3, 'list')
 }
 
 
@@ -541,9 +541,10 @@ if(param.recommanded.doc_distance)
   cat('\n Cosine similary','------------------------------------')
   gc()
   
-  test_idx_doc = 100 
+  test_idx_doc = 1000 
   test_url_doc = 'http://phys.org/news/2016-02-sustainability-social-important-profit.html'
   test_url_doc = "http://phys.org/news/2011-07-gemasolar-solar-thermal-power-hours.html"
+  test_url_doc = "http://phys.org/news/2009-05-dtxtr-teen-text-english.html"
   
   # http://phys.org/news/2014-03-chicken-bones-true-story-pacific.html
   # http://phys.org/news/2008-08-reveals-chooks.html
@@ -560,7 +561,8 @@ if(param.recommanded.doc_distance)
   
   test_id_doc = as.numeric(colnames(bench.dt_train.sim[,test_idx_doc, with=FALSE]))
   
-  d.art.c.bench.url[id == test_id_doc]$url
+  test_url_doc = d.art.c.bench.url[id == test_id_doc]$url
+  test_url_doc 
   # d.art.c.bench[id == test_id_doc]$content
   
   op <- par(mfrow = c(1, 2))
