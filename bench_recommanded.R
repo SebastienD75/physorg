@@ -31,7 +31,7 @@
   # > dim(d.recommanded.bin)
   # [1] 9124 7949
   
-  param.nbmin_artcomments = 5 
+  param.nbmin_artcomments = 2
   # > dim(d.recommanded.bin)
   # [1] 10537 14003
   
@@ -87,7 +87,7 @@
   t.idx_user_selected_cat <- which(d.com.user.actifs$url %in% d.art.c.bench[category %in% param.cat]$url)
   t.users.actif_selected_cat <- d.com.user.actifs[t.idx_user_selected_cat,]
   d.com.user.actifs <- t.users.actif_selected_cat
-  rm(list = c('d.com.user.actifs.sav', 't.idx_user_selected_cat', 't.users.actif_selected_cat'))
+  rm(list = c('t.idx_user_selected_cat', 't.users.actif_selected_cat'))
   
   d.art.c.bench$url <- NULL
   
@@ -98,12 +98,12 @@
   d.art.c.bench$content.nolem <- NULL
   d.art.c.bench$content.org <- NULL
   
-  d.art.c.bench.sample <- d.art.c.bench[0,]
-  for(l in levels(d.art.c.bench$subcategory)) {
-    nb_lines_subcat <- min(param.full_subcat_sample_size, dim(d.art.c.bench[subcategory == l])[[1]])
-    sample_subcat <- sample_n(d.art.c.bench[subcategory == l], nb_lines_subcat)
-    d.art.c.bench.sample <- rbind(d.art.c.bench.sample, sample_subcat)
-  }
+  # d.art.c.bench.sample <- d.art.c.bench[0,]
+  # for(l in levels(d.art.c.bench$subcategory)) {
+  #   nb_lines_subcat <- min(param.full_subcat_sample_size, dim(d.art.c.bench[subcategory == l])[[1]])
+  #   sample_subcat <- sample_n(d.art.c.bench[subcategory == l], nb_lines_subcat)
+  #   d.art.c.bench.sample <- rbind(d.art.c.bench.sample, sample_subcat)
+  # }
   
   
   rm(list = c('d.art.com.user.actifs','d.com','d.user'))
@@ -278,6 +278,11 @@ if(param.recommanded.user_distance){
     afm <- afm.real
     rm(afm.real)
     
+    
+    png(filename="data/recommanded_real_matrix.png")
+    # image(sample(afm, 1000), main = "Raw ratings")
+    image(afm, main = "Raw ratings")
+    dev.off()
     reco.model <- Recommender(afm,
                               method="UBCF",
                               param=list(normalize = "Z-score",method="Cosine",nn=5)
@@ -311,11 +316,7 @@ if(param.recommanded.user_distance){
           main = "Histogram of normalized ratings", xlab = "Rating", log = 'x')
     
     summary(getRatings(normalize(afm, method = "Z-score")))
-    
-    png(filename="data/recommanded_real_matrix.png")
-    # image(sample(afm, 1000), main = "Raw ratings")
-    image(afm, main = "Raw ratings")
-    dev.off()
+
     
     qplot(rowCounts(afm), binwidth = .1, 
           main = "Document Rated on average", 
@@ -334,9 +335,13 @@ if(param.recommanded.user_distance){
     afm <- afm.bin
     rm(afm.bin)
     
+    png(filename="data/recommanded_bin_matrix.png")
+    # image(sample(afm, 1000), main = "Raw ratings")
+    image(afm, main = "Raw ratings")
+    dev.off()
     
     algorithms <- list(
-      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k)),
+      # "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k)),
       "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
       "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
       "user-based CF" = list(name="UBCF", param=list(nn=param.ubcf.nn))
@@ -352,11 +357,7 @@ if(param.recommanded.user_distance){
     
     scheme <- evaluationScheme(afm, method="cross-validation",
                                k=param.nfold, given=-1)
-    
-    png(filename="data/recommanded_bin_matrix.png")
-    # image(sample(afm, 1000), main = "Raw ratings")
-    image(afm, main = "Raw ratings")
-    dev.off()
+
     
   }
   
