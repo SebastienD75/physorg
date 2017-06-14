@@ -19,27 +19,35 @@
 
 # Find actif user data ---------------------------------------------------------------
 {
-  param.recommanded.doc_distance = FALSE
+  param.recommanded.doc_distance = TRUE
   param.recommanded.user_distance = TRUE
   param.lemmatized = TRUE
   param.recommanded.real = FALSE
-  param.nbmin_artcomments = 15
-  param.eval.nreco = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20)
-  param.nfold = 10
-  param.ubcf.nn = 100
-  param.ibcf.k = 10
+  param.remmender.evaluation = FALSE
+  
+  param.cat <- c('Astronomy & Space', 'Earth', 'Technology')
+  
+  # param.nbmin_artcomments = 10
+  # > dim(d.recommanded.bin)
+  # [1] 9124 7949
+  
+  param.nbmin_artcomments = 5 
+  # > dim(d.recommanded.bin)
+  # [1] 10537 14003
+  
+  param.eval.nreco = c(1, 2, 3, 4, 5, 8, 12)
+  param.nfold = 5
+  param.ubcf.nn = 50
+  param.ibcf.k = 5
   
   param.full_subcat_sample_size <- 100
   param.clean_content.file <- 'data/physorg_bagofwords_d.art.c.bench_d.user_d.com.RData'
+  load(param.clean_content.file)
   
   # param.nbmin_usercomments = 50 #10
   # param.nbmax_usercomments = 500 #300
   # param.nbmin_userarticles = 25 #5
   # param.nbmax_userarticles = 200
-  
-  # d.art.c.bench <- d.art.c.bench.org
-  load(param.clean_content.file)
-  d.art.c.bench.org <- d.art.c.bench
   
   qplot(d.com$nbarticlecomments, geom='histogram', bins = 100, xlim = c(5,300))
   
@@ -47,13 +55,10 @@
   #                           nbcom <= param.nbmax_usercomments &
   #                           nbart >= param.nbmin_userarticles & 
   #                           nbart <= param.nbmax_userarticles]
-  
-  
   d.user.actifs <- d.user
   d.user.actifs$user <- droplevels(d.user.actifs$user)
   
-  d.com.user.actifs <- d.com[nbarticlecomments >= param.nbmin_artcomments &
-                               user %in% d.user.actifs$user] %>%
+  d.com.user.actifs <- d.com[nbarticlecomments >= param.nbmin_artcomments & user %in% d.user.actifs$user] %>%
     group_by(user, url) %>%
     summarise(n = n(), rank = mean(rank), wc = sum(wc_comment)) %>%
     setDT
@@ -77,6 +82,13 @@
   d.art.c.bench <- d.art.com.user.actifs
   
   d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
+  
+  # t.idx_user_selected_cat <- which(d.com.user.actifs$url %in% d.art[category %in% param.cat]$url)
+  t.idx_user_selected_cat <- which(d.com.user.actifs$url %in% d.art.c.bench[category %in% param.cat]$url)
+  t.users.actif_selected_cat <- d.com.user.actifs[t.idx_user_selected_cat,]
+  d.com.user.actifs <- t.users.actif_selected_cat
+  rm(list = c('d.com.user.actifs.sav', 't.idx_user_selected_cat', 't.users.actif_selected_cat'))
+  
   d.art.c.bench$url <- NULL
   
   if(!param.lemmatized) {
@@ -93,6 +105,7 @@
     d.art.c.bench.sample <- rbind(d.art.c.bench.sample, sample_subcat)
   }
   
+  
   rm(list = c('d.art.com.user.actifs','d.com','d.user'))
   
   cat('\nActif users: ', length(unique(d.com.user.actifs$user)))
@@ -106,18 +119,19 @@
 {
   ## -- PIPLINE --
   param.dotfidf = TRUE
-  param.dostem = TRUE
-  param.dongram = TRUE
   param.doprune = TRUE
+  param.dongram = FALSE
+  param.dostem = FALSE
   param.dofeaturehashing = FALSE # incompatible avec prune
   
   ## -- CAT / SUB CAT --
-  param.mutate.subcat.as.cat = TRUE
+  param.mutate.subcat.as.cat = FALSE
   
-  param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 
-                 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+  # param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics',
+  #                'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+  param.cat <- c('Astronomy & Space', 'Earth', 'Technology')
   
-  param.mutate.subcat.cat <- c('Earth')
+  param.mutate.subcat.cat <- c('Astronomy & Space', 'Earth', 'Technology')
   
   param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                     'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea',
@@ -130,10 +144,10 @@
   ## -- MAX DATA
   param.nblines_max.default = 1000^10
   
-  param.train_test <- 0.95
+  param.train_test <- 0.7
   
   ## -- PRUNE --
-  param.prune.term_count_min.default = 80 
+  param.prune.term_count_min.default = 5 
   param.prune.doc_proportion_max.default = 1 # (default pkg 1)
   param.prune.doc_proportion_min.default = 0 # (default pkg 0)
   
@@ -176,8 +190,8 @@
 
 # USER RECOMMENDATION  -------------------------------------------
 
-if(param.recommanded.user_distance)
-{
+if(param.recommanded.user_distance){
+  
   # http://stackoverflow.com/questions/30629522/error-in-using-recommenderlab-package-in-r
   # https://www.r-bloggers.com/recommender-systems-101-a-step-by-step-practical-example-in-r/
   cat('\n Recommanded sys','------------------------------------')
@@ -270,14 +284,23 @@ if(param.recommanded.user_distance)
     )
     
     algorithms <- list(
+      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k)),
       "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
       "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
       "user-based CF" = list(name="UBCF", param=list(normalize = "Z-score",
                                                      method="Cosine",
                                                      nn=param.ubcf.nn)),
-      "SVD" = list(name="SVD", param=list(normalize = "Z-score")),
-      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k))
+      "SVD" = list(name="SVD", param=list(normalize = "Z-score"))
     )
+    
+    # scheme <- evaluationScheme(afm, method = "split", train = .7,
+    #                            k = param.nfold, given = 1, goodRating = 1)
+    
+    
+    
+    scheme <- evaluationScheme(afm, method="cross-validation", goodRating = 0.01,
+                               k=param.nfold, given=-1)
+    scheme
     
     summary(getRatings(afm))
     
@@ -289,8 +312,10 @@ if(param.recommanded.user_distance)
     
     summary(getRatings(normalize(afm, method = "Z-score")))
     
-    
-    image(sample(afm, 1000), main = "Raw ratings")
+    png(filename="data/recommanded_real_matrix.png")
+    # image(sample(afm, 1000), main = "Raw ratings")
+    image(afm, main = "Raw ratings")
+    dev.off()
     
     qplot(rowCounts(afm), binwidth = .1, 
           main = "Document Rated on average", 
@@ -309,53 +334,50 @@ if(param.recommanded.user_distance)
     afm <- afm.bin
     rm(afm.bin)
     
-    reco.model <- Recommender(afm, method = 'UBCF')
     
     algorithms <- list(
+      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k)),
       "random items" = list(name="RANDOM", param=list(normalize = "Z-score")),
       "popular items" = list(name="POPULAR", param=list(normalize = "Z-score")),
-      "user-based CF" = list(name="UBCF", param=list(nn=param.ubcf.nn)),
-      "item-based CF" = list(name="IBCF", param=list(k=param.ibcf.k))
+      "user-based CF" = list(name="UBCF", param=list(nn=param.ubcf.nn))
     )
     
-    summary(getRatings(afm))
-    image(sample(afm, 1000), main = "Raw ratings")
+    # ## simple split with 3 items given
+    # esSplit <- evaluationScheme(MSWeb10, method="split",
+    #                             train = 0.9, k=1, given=3)
+    
+    # ## 4-fold cross-validation with all-but-1 items for learning.
+    # esCross <- evaluationScheme(MSWeb10, method="cross-validation",
+    #                             k=4, given=-1)
+    
+    scheme <- evaluationScheme(afm, method="cross-validation",
+                               k=param.nfold, given=-1)
+    
+    png(filename="data/recommanded_bin_matrix.png")
+    # image(sample(afm, 1000), main = "Raw ratings")
+    image(afm, main = "Raw ratings")
+    dev.off()
     
   }
   
-  topitems <- predict(reco.model, afm[param.test_useridx,], n=param.ubcf.nn)
+  if(param.remmender.evaluation) {
+    # run algorithms, predict next n movies
+    results <- evaluate(scheme, algorithms, n=param.eval.nreco, keepModel = FALSE)
+    
+    # Draw ROC curve
+    plot(results, annotate = 1:length(algorithms), legend="topleft")
+    
+    # See precision / recall
+    plot(results, "prec/rec", annotate = 1:length(algorithms))
+    
+  } 
   
+  reco.model <- Recommender(afm, method = 'UBCF')
+  topitems <- predict(reco.model, afm[param.test_useridx,], n=param.ubcf.nn)
   topitems
   best3 <- bestN(topitems, n = 3)
   as(topitems, 'list')
   as(best3, 'list')
-
-  # scheme <- evaluationScheme(afm, method = "split", train = .7,
-  #                            k = param.nfold, given = 1, goodRating = 1)
-  
-  scheme <- evaluationScheme(afm, method="cross-validation",
-                              k=param.nfold, given=-1)
-  scheme
-
-  
-  # run algorithms, predict next n movies
-  results <- evaluate(scheme, algorithms, n=param.eval.nreco, keepModel = TRUE)
-  
-  # Draw ROC curve
-  plot(results, annotate = 1:length(algorithms), legend="topleft")
-  
-  # See precision / recall
-  plot(results, "prec/rec", annotate = 1:length(algorithms))
-  
-  # ## simple split with 3 items given
-  # esSplit <- evaluationScheme(MSWeb10, method="split",
-  #                             train = 0.9, k=1, given=3)
-  # esSplit
-  # 
-  # ## 4-fold cross-validation with all-but-1 items for learning.
-  # esCross <- evaluationScheme(MSWeb10, method="cross-validation",
-  #                             k=4, given=-1)
-  # esCross
 }
 
 
@@ -515,9 +537,14 @@ if(param.recommanded.doc_distance)
   
   test_idx_doc = 100 
   test_url_doc = 'http://phys.org/news/2016-02-sustainability-social-important-profit.html'
+  test_url_doc = "http://phys.org/news/2011-07-gemasolar-solar-thermal-power-hours.html"
   
   # http://phys.org/news/2014-03-chicken-bones-true-story-pacific.html
   # http://phys.org/news/2008-08-reveals-chooks.html
+  
+  # res.model.xgboost.general.dtm_train <- bench.dtm_train
+  # res.recommenderlab.dtsim <- as.data.table(as.matrix(sim2(res.model.xgboost.general.dtm_train, method = 'cosine')))
+  # res.recommenderlab.dtsim$id_doc <- as.numeric(colnames(res.recommenderlab.dtsim))
   
   # bench.dtm_train.dist = dist2(bench.dtm_train)
   bench.dt_train.sim <- as.data.table(as.matrix(sim2(bench.dtm_train, method = 'cosine')))
