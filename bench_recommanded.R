@@ -39,7 +39,7 @@
   # > dim(d.recommanded.bin)
   # [1] 10537 14003
   
-  param.nbmin_artcomments = 3
+  param.nbmin_artcomments = 10
   # all_cat !
   # > dim(afm)
   # [1] 18039 34183
@@ -66,7 +66,8 @@
                      paste(substr(param.cat, 1, 3), collapse = '.'), 
                      '.png')
   
-  qplot(d.com$nbarticlecomments, geom='histogram', bins = 100, xlim = c(5,300))
+  plot.articomm <- qplot(d.com$nbarticlecomments, geom='histogram', bins = 1000, xlim = c(2,1000))
+  plot.articomm + scale_fill_gradient(low = 'blue', high = 'red')
   
   # d.user.actifs <- d.user[nbcom >= param.nbmin_usercomments & 
   #                           nbcom <= param.nbmax_usercomments &
@@ -568,6 +569,13 @@ if(param.recommanded.doc_distance)
   op <- par(mfrow = c(1, 2))
   boxplot(bench.dt_train.sim[,as.character(test_id_doc), with = FALSE])
   boxplot(bench.dt_train.sim[id_doc != test_id_doc  ,as.character(test_id_doc), with = FALSE])
+  
+  t.mean.dist <- apply(bench.dt_train.sim, 1, function(x) mean(x[x < 1], na.rm = TRUE))
+  t.max.dist <- apply(bench.dt_train.sim, 1, function(x) max(x[x < 1], na.rm = TRUE))
+  
+  boxplot(t.mean.dist)
+  boxplot(t.max.dist)
+  
   op <- par(mfrow = c(1, 1))
   
   bench.dt_train.sim[,c('id_doc',as.character(test_id_doc)), with = FALSE] %>% 
