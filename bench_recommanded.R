@@ -39,7 +39,7 @@
   # > dim(d.recommanded.bin)
   # [1] 10537 14003
   
-  param.nbmin_artcomments = 3
+  param.nbmin_artcomments = 10
   # all_cat !
   # > dim(afm)
   # [1] 18039 34183
@@ -98,15 +98,12 @@
   
   d.art.c.bench <- d.art.com.user.actifs
   
-  d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
-  
   # t.idx_user_selected_cat <- which(d.com.user.actifs$url %in% d.art[category %in% param.cat]$url)
   t.idx_user_selected_cat <- which(d.com.user.actifs$url %in% d.art.c.bench[category %in% param.cat]$url)
   t.users.actif_selected_cat <- d.com.user.actifs[t.idx_user_selected_cat,]
   d.com.user.actifs <- t.users.actif_selected_cat
   rm(list = c('t.idx_user_selected_cat', 't.users.actif_selected_cat'))
   
-  d.art.c.bench$url <- NULL
   
   if(!param.lemmatized) {
     d.art.c.bench$content <- d.art.c.bench$content.nolem
@@ -136,7 +133,7 @@
 {
   ## -- PIPLINE --
   param.dotfidf = TRUE
-  param.doprune = TRUE
+  param.doprune = FALSE
   param.dongram = FALSE
   param.dostem = FALSE
   param.dofeaturehashing = FALSE # incompatible avec prune
@@ -160,7 +157,7 @@
   ## -- MAX DATA
   param.nblines_max.default = 1000^10
   
-  param.train_test <- 0.7
+  param.train_test <- 1
   
   ## -- PRUNE --
   param.prune.term_count_min.default = 5 
@@ -201,6 +198,9 @@
       setDT() %>%
       setkey(id)
   }
+  
+  d.art.c.bench.url <- d.art.c.bench %>% select(id, url)
+  d.art.c.bench$url <- NULL
 }
 
 
@@ -317,7 +317,7 @@ if(param.recommanded.user_distance){
     # scheme <- evaluationScheme(afm, method = "split", train = .7,
     #                            k = param.nfold, given = 1, goodRating = 1)
     
-    scheme <- evaluationScheme(afm, method="cross-validation", goodRating = 0.01,
+    scheme <- evaluationScheme(afm, method="cross-validation", goodRating = 1, #goodRating = 0.01,
                                k=param.nfold, given=-1)
     scheme
     
@@ -415,9 +415,9 @@ if(param.recommanded.doc_distance)
     bench.num_sample = ceiling(param.train_test * dim(d.bench)[[1]])
     bench.all_ids = d.bench$id
     bench.train_ids = sample(bench.all_ids, bench.num_sample)
-    bench.test_ids = setdiff(bench.all_ids, bench.train_ids)
+    # bench.test_ids = setdiff(bench.all_ids, bench.train_ids)
     bench.train = d.bench[J(bench.train_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
-    bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
+    # bench.test = d.bench[J(bench.test_ids)] %>% mutate(category = droplevels(category)) %>% setDT() 
     
     gc()
     
@@ -448,9 +448,9 @@ if(param.recommanded.doc_distance)
                              ids = bench.train$id,
                              progressbar = FALSE)
     
-    bench.it_test <- bench.test$content %>% 
-      word_tokenizer %>%
-      itoken(ids = bench.test$id, progressbar = FALSE)
+    # bench.it_test <- bench.test$content %>% 
+    #   word_tokenizer %>%
+    #   itoken(ids = bench.test$id, progressbar = FALSE)
     
     if(param.dofeaturehashing) {
       param.doprune = FALSE
@@ -471,9 +471,9 @@ if(param.recommanded.doc_distance)
         bench.dtm_train<-create_dtm(bench.it_train, bench.h_vectorizer)
       ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
       
-      bench.dtm_test.time <- system.time(
-        bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
-      ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
+      # bench.dtm_test.time <- system.time(
+      #   bench.dtm_test<-create_dtm(bench.it_test, bench.h_vectorizer)
+      # ); print(sprintf('bench.dtm_test.time: %0.2fs', bench.dtm_test.time[[3]]))
       
       
     } else {
@@ -517,9 +517,9 @@ if(param.recommanded.doc_distance)
         bench.dtm_train<-create_dtm(bench.it_train, bench.vectorizer)
       ); print(sprintf('bench.dtm_train.time: %0.2fs', bench.dtm_train.time[[3]]))
       
-      bench.dtm_test.time <- system.time(
-        bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
-      ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
+      # bench.dtm_test.time <- system.time(
+      #   bench.dtm_test<-create_dtm(bench.it_test, bench.vectorizer)
+      # ); print(sprintf('bench.dtm_test: %0.2fs', bench.dtm_test.time[[3]]))
     }
     
     
@@ -530,9 +530,9 @@ if(param.recommanded.doc_distance)
       
       # tfidf modified by fit_transform() call!
       # apply pre-trained tf-idf transformation to test data
-      bench.dtm_test = 
-        create_dtm(bench.it_test, bench.vectorizer) %>% 
-        transform(tfidf)
+      # bench.dtm_test = 
+      #   create_dtm(bench.it_test, bench.vectorizer) %>% 
+      #   transform(tfidf)
     } else {
       print('TFIDF : FALSE')
     }
@@ -591,3 +591,49 @@ if(param.recommanded.doc_distance)
     mutate(id_doc = as.numeric(id_doc)) %>%
     left_join(d.art.c.bench.url, by = c('id_doc' = 'id'))
 }
+
+param_rename.and.clean <- FALSE
+if(param_rename.and.clean) 
+{
+  res.recommender10_sim <- bench.dt_train.sim
+  rm(bench.dt_train.sim)
+  
+  res.recommender10_afm <- afm
+  rm(afm)
+  
+  res.recommender10_algorithms <- algorithms
+  rm(algorithms)
+  
+  res.recommender10_afm.img.name <- afm.img.name
+  rm(afm.img.name)
+  
+  res.recommender10_scheme <- scheme
+  rm(scheme)
+  
+  res.recommender10_results.evaluate.scheme <- results
+  rm(results)
+  
+  res.recommender10_model <- reco.model
+  rm(reco.model)
+  
+  res.recommender10_url <- d.art.c.bench.url
+  rm(d.art.c.bench.url)
+  
+  res.recommender10_urlid <- d.art.c.bench$id
+  rm(d.art.c.bench)
+  
+  res.recommender10_users <- d.com.user.actifs
+  rm(d.com.user.actifs)
+  
+  t.lst_param <- ls()[grepl('^param\\.',ls())]
+  t.lst_newparam <- paste0('res.recommender10_', t.lst_param)
+  t.expr <- paste0(t.lst_newparam, ' <- ', t.lst_param)
+  eval(parse(text = t.expr))
+  rm(list = t.lst_param)
+  
+  
+  t.lst_tosuppr <- ls()[!grepl('res\\.recommender10_',ls())]
+  rm(list = t.lst_tosuppr)
+  rm(t.lst_tosuppr)
+}
+
