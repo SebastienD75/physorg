@@ -1354,7 +1354,8 @@
           }
           
         
-          
+          # https://datascience.stackexchange.com/questions/9364/hypertuning-xgboost-parameters/9368#9368
+          # https://github.com/dmlc/xgboost/blob/master/doc/parameter.md
           if(param.bench.xgboost.grid)
           {
             suppressWarnings(suppressMessages(library(xgboost)))
@@ -1383,8 +1384,9 @@
             t.best.param.current.colsample_bytree <- 0
             t.best.param.current.xgb_max.depth <- 0
             t.best.param.current.nrounds <- 0
-            t.current.it <- 1
+            t.best.current.it <- 0
             
+            t.current.it <- 1
             res.param.bench.xgboost.grid <- apply(param.xgboost.grid.searchGrid, 1, function(parameterList){ 
               
               gc()
@@ -1394,10 +1396,10 @@
                   '\n current.subsample:', parameterList[["subsample"]],
                   '\n current.colsample_bytree:', parameterList[["colsample_bytree"]],
                   '\n current.xgb_max.depth:', parameterList[["xgb_max.depth"]],
-                  '\n current.nrounds:', parameterList[["nrounds"]],'\n' 
+                  '\n current.nrounds:', parameterList[["nrounds"]],'\n\n' 
               )
               
-              param.xgboost.grid.eta <- 2/parameterList[["nrounds"]]
+              # param.xgboost.grid.eta <- 2/parameterList[["nrounds"]]
               param.xgboost.grid.eta <- 10/parameterList[["nrounds"]]
               
               bench.cv.xgboost.grid_classifier <- xgb.cv(data = bench.xgboost_classifier.trainmatrix,
@@ -1432,6 +1434,7 @@
               bench.xgboost.grid_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
             
               if(t.res.test_mlogloss_mean > t.best.res.test_mlogloss_mean) {
+                t.best.current.it <- t.current.it
                 t.best.res.test_mlogloss_mean <- t.res.test_mlogloss_mean
                 t.best.accuracy <- res.accuracy
                 t.best.param.current.subsample <- parameterList[["subsample"]]
@@ -1440,7 +1443,7 @@
                 t.best.param.current.nrounds <- parameterList[["nrounds"]] 
               }
               
-              cat(sprintf("[%d/%d] \n Results :", t.current.it, nrow(param.xgboost.grid.searchGrid)))
+              cat(sprintf("\n\n [%d/%d] Results :", t.current.it, nrow(param.xgboost.grid.searchGrid)))
               cat('\n', bench.xgboost.grid_classifier.accuracy)
               cat('\n Time :', difftime(tend, t0, units = 'mins'))
               cat('\n Best :',
