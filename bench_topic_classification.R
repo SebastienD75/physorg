@@ -137,7 +137,7 @@
     } 
     else 
     {
-      protected.obj <- c('bench.glmnet_classifier','chk', 'bench.params', 'bench.results', 'param.clean_content.file', 'param.lemmatized')
+      protected.obj <- c('chk', 'bench.params', 'bench.results', 'param.clean_content.file', 'param.lemmatized')
       rm(list = setdiff(ls(), protected.obj))
       load(param.clean_content.file)
       
@@ -155,7 +155,7 @@
     
     d.art.c.bench[, content := removeWords(content, c('category','can','say', 'will', 'use'))]
     
-    completed.obj <- c('bench.glmnet_classifier','chk', 'bench.params', 'd.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
+    completed.obj <- c('chk', 'bench.params', 'bench.results', 'd.user.actifs', 'd.com.user.actifs', 'd.art.com.user.actifs', 'd.art.c.bench.sample')
     protected.obj <- c(completed.obj, "protected.obj", "bench.models", "bench.results", "d.art.c.bench", 'd.art.c.bench.url','param.lemmatized')
     rm(list = setdiff(ls(), protected.obj))
     # param.cleaninloop = c('d.bench', 'd.art.c.bench')
@@ -179,7 +179,7 @@
     param.doprune = TRUE
     chk('param.doprune', TRUE, TRUE)
     
-    param.dongram = TRUE
+    param.dongram = FALSE
     chk('param.dongram', TRUE, TRUE)
     
     param.dofeaturehashing = FALSE # incompatible avec prune
@@ -197,7 +197,7 @@
     param.mutate.subcat.as.cat = FALSE
     chk('param.mutate.subcat.as.cat', FALSE, TRUE)
     
-    param.mutate.subcat.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
+    param.mutate.subcat.cat <- c('Technology')
     param.cat <- c('Astronomy & Space','Other Sciences','Technology','Physics', 'Nanotechnology','Health', 'Biology', 'Earth','Chemistry')
     param.dorpsc <- c('Other', 'Business Hi Tech & Innovation',
                       'Health Social Sciences','Pediatrics','Overweight and Obesity','Cardiology','Sleep apnea','Medicine & Health',
@@ -273,7 +273,7 @@
     ## -- PRUNE --
     # cat('\n', '-- Params PRUNE --','\n')
 
-    param.prune.term_count_min.default = 200
+    param.prune.term_count_min.default = 500
     chk('param.prune.term_count_min.default', 80)
     
     param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
@@ -306,10 +306,10 @@
     ## -- MODELS --
     # cat('\n', '-- Params MODELS --','\n')
     
-    param.evaluate_model = TRUE # TRUE par default !
+    param.evaluate_model = FALSE # TRUE par default !
     chk('param.evaluate_model', TRUE)
     
-    param.bench.glmnet = TRUE
+    param.bench.glmnet = FALSE
     chk('param.bench.glmnet', TRUE, TRUE)
     
     param.bench.naivebayes = FALSE
@@ -317,6 +317,9 @@
     
     param.bench.xgboost = FALSE
     chk('param.bench.xgboost', FALSE)
+    
+    param.bench.xgboost.cv = TRUE
+    chk('param.bench.xgboost.cv', FALSE)
     
     param.randomForest = FALSE
     chk('param.randomForest', FALSE)
@@ -388,8 +391,16 @@
   
   # FUNCTIONS  -------------------------------------------------------------------
   {
-    # protected.model.obj <- c('bench.glmnet_classifier','docpred_dtm', 'tfidf', 'model', 'bench.vectorizer')
-    # rm(list = setdiff(ls(), protected.model.obj))
+    protected.model.obj <- c('res.model', 't.current.cat','res.confmat','bench.model_classifier','docpred_dtm', 'tfidf', 'bench.vectorizer', 'bench.params', 'bench.results')
+    # rm(list = setdiff(ls(), paste0(paste0(res.model, '_'), protected.model.obj)))
+    
+    # paste0(paste0(res.model, '_'), protected.model.obj)
+    # paste0(paste0(res.model, '_'), protected.model.obj, ' <- ', protected.model.obj)
+    # eval(parse(text = paste0(paste0(res.model, '_'), protected.model.obj, ' <- ', protected.model.obj)))
+    # ls()[!grepl("^res.", ls())]
+    # rm(list = setdiff(ls(), paste0(paste0(res.model, '_'), protected.model.obj)))
+    
+    # save.image("data/results.xgboost_category-model_pred-dtm.RData")
     
     dtm_from_words <- function(str_to_convert) {
       library(textstem)
@@ -415,25 +426,25 @@
       
       # a sauvegarder : bench.dtm_test vide, tfidf, model, bench.vectorizer
       content_tokens <- content_df$content %>% word_tokenizer
-      
       content_it_tokens <- itoken(content_tokens,ids = 1,progressbar = FALSE)
       
       # content_vocab <- create_vocabulary(content_it_tokens, ngram = c(1L, 2L))
-      
       # content_vectorizer <- vocab_vectorizer(content_vocab)
       
       content_dtm <- create_dtm(content_it_tokens, bench.vectorizer) %>% transform(tfidf)
       
-      # content_tfidf_dtm <- fit_transform(content_dtm, tfidf)
-      
-      # t.dtm_to_pred <- dtm_from_words(bench.test[1,]$content)
+      # t.idx_sample_1 <- sample(1:nrow(bench.test), size = 1)
+      # t.dtm_to_pred <- dtm_from_words(bench.test[t.idx_sample_1,]$content)
+      # bench.test[t.idx_sample_1,]$category
       # t.dtm_to_pred <- dtm_from_words(t.str)
-      # docpred_dtm <- bench.dtm_test[0,]
-      # docpred_dtm <- rbind(docpred_dtm, rep(0,dim(docpred_dtm)[2]))
-      # t.idx_cols <- which(colnames(docpred_dtm) %in% colnames(t.dtm_to_pred))
-      # docpred_dtm[1,t.idx_cols] <- t.dtm_to_pred[1,colnames(docpred_dtm)[t.idx_cols]]
-      # t.pred <- predict(bench.glmnet_classifier, docpred_dtm, s = "lambda.min", type = 'class')
-      # t.pred <- droplevels(t.pred)
+      # t.docpred_dtm <- docpred_dtm[0,]
+      # t.docpred_dtm <- rbind(t.docpred_dtm, rep(0,dim(t.docpred_dtm)[2]))
+      # t.idx_cols <- which(colnames(t.docpred_dtm) %in% colnames(t.dtm_to_pred))
+      # t.docpred_dtm[1,t.idx_cols] <- t.dtm_to_pred[1,colnames(t.docpred_dtm)[t.idx_cols]]
+      # t.classif <- bench.model_classifier
+      # t.pred <- predict(t.classif, t.docpred_dtm, s = "lambda.min", type = 'class')
+      # t.pred <- ifelse(class(t.pred) == "numeric", levels(bench.train$category)[t.pred], droplevels(t.pred))
+      # ? t.pred <- ifelse(class(t.pred) == "numeric", levels(bench.train$subcategory)[t.pred], droplevels(t.pred))
       # t.pred
     }
     
@@ -615,47 +626,47 @@
       num_sav <<- num_sav + 1
     }
     
-    save_model <- function(model_name) 
-    {
-      print(sprintf("Model %s (%0.1f min): num sample=%s, dim_train=(%d, %d), %s", 
-                    model_name, 
-                    bench.glmnet_classifier.time[[3]]/60,
-                    bench.models[[model_name]]$param.num_sample,
-                    bench.models[[model_name]]$bench.dtm_train.dim[[1]],
-                    bench.models[[model_name]]$bench.dtm_train.dim[[2]],
-                    bench.models[[model_name]]$bench.glmnet_classifier.accuracy))
-      
-      return(0)
-      
-      bench.models[[model_name]]$model_name <<- model_name
-      bench.models[[model_name]]$model_num <<- model_num
-      bench.models[[model_name]]$model_desc <<- model_desc
-      
-      bench.models[[model_name]]$param.dorpsc <<- param.dorpsc
-      
-      bench.models[[model_name]]$bench.train_tokens.time <<- bench.train_tokens.time
-      bench.models[[model_name]]$bench.dtm_train.time <<- bench.dtm_train.time
-      bench.models[[model_name]]$bench.dtm_test.time <<- bench.dtm_test.time
-      bench.models[[model_name]]$bench.dtm_train.dim <<- dim(bench.dtm_train)
-      bench.models[[model_name]]$bench.dtm_test.dim <<- dim(bench.dtm_test)
-      bench.models[[model_name]]$bench.vectorizer <<- bench.vectorizer
-      bench.models[[model_name]]$bench.glmnet_classifier.time <<- bench.glmnet_classifier.time
-      bench.models[[model_name]]$bench.glmnet_classifier <<- bench.glmnet_classifier
-      bench.models[[model_name]]$bench.preds.class.time <<- bench.preds.class.time
-      bench.models[[model_name]]$bench.glmnet_classifier.accuracy <<- bench.glmnet_classifier.accuracy
-      bench.models[[model_name]]$bench.glmnet_classifier.accuracy_cat <<- res
-    }
+    # save_model <- function(model_name) 
+    # {
+    #   print(sprintf("Model %s (%0.1f min): num sample=%s, dim_train=(%d, %d), %s", 
+    #                 model_name, 
+    #                 bench.glmnet_classifier.time[[3]]/60,
+    #                 bench.models[[model_name]]$param.num_sample,
+    #                 bench.models[[model_name]]$bench.dtm_train.dim[[1]],
+    #                 bench.models[[model_name]]$bench.dtm_train.dim[[2]],
+    #                 bench.models[[model_name]]$bench.glmnet_classifier.accuracy))
+    #   
+    #   return(0)
+    #   
+    #   bench.models[[model_name]]$model_name <<- model_name
+    #   bench.models[[model_name]]$model_num <<- model_num
+    #   bench.models[[model_name]]$model_desc <<- model_desc
+    #   
+    #   bench.models[[model_name]]$param.dorpsc <<- param.dorpsc
+    #   
+    #   bench.models[[model_name]]$bench.train_tokens.time <<- bench.train_tokens.time
+    #   bench.models[[model_name]]$bench.dtm_train.time <<- bench.dtm_train.time
+    #   bench.models[[model_name]]$bench.dtm_test.time <<- bench.dtm_test.time
+    #   bench.models[[model_name]]$bench.dtm_train.dim <<- dim(bench.dtm_train)
+    #   bench.models[[model_name]]$bench.dtm_test.dim <<- dim(bench.dtm_test)
+    #   bench.models[[model_name]]$bench.vectorizer <<- bench.vectorizer
+    #   bench.models[[model_name]]$bench.glmnet_classifier.time <<- bench.glmnet_classifier.time
+    #   bench.models[[model_name]]$bench.glmnet_classifier <<- bench.glmnet_classifier
+    #   bench.models[[model_name]]$bench.preds.class.time <<- bench.preds.class.time
+    #   bench.models[[model_name]]$bench.glmnet_classifier.accuracy <<- bench.glmnet_classifier.accuracy
+    #   bench.models[[model_name]]$bench.glmnet_classifier.accuracy_cat <<- res
+    # }
     
-    print_model <- function(model) {
-      params <- c('model_name', 'model_num','param.num_sample','model_desc','bench.dtm_train.dim', 'bench.glmnet_classifier.accuracy')
-      lapply(model, function(m) {
-        lapply(params, function(p) {
-          str <- paste0(p, ':', m[[p]])
-          str <- gsub('(.*)\\$.*', ':\\1',str)
-          print(str)
-        })
-      })
-    }
+    # print_model <- function(model) {
+    #   params <- c('model_name', 'model_num','param.num_sample','model_desc','bench.dtm_train.dim', 'bench.glmnet_classifier.accuracy')
+    #   lapply(model, function(m) {
+    #     lapply(params, function(p) {
+    #       str <- paste0(p, ':', m[[p]])
+    #       str <- gsub('(.*)\\$.*', ':\\1',str)
+    #       print(str)
+    #     })
+    #   })
+    # }
   }
   
   # INIT -------------------------------------------------------------------
@@ -951,7 +962,7 @@
               # d.art.c.bench.url[id == id_doc]$url
               # d.art.c.bench[id == id_doc]$content
               
-              # protected.glmobj <- c('bench.params',"bench.dtm_train", "bench.train", "param.bench.glmnet.NFOLDS",
+              # protected.glmobj <- c('bench.params','bench.results', "bench.dtm_train", "bench.train", "param.bench.glmnet.NFOLDS",
               #                       "param.bench.glmnet.THRESH", "param.bench.glmnet.MAXIT",
               #                       "bench.dtm_test","bench.test", "model_name")
               # 
@@ -959,7 +970,7 @@
               
               gc()
               bench.glmnet_classifier.time <- system.time(
-                bench.glmnet_classifier <- cv.glmnet(x = bench.dtm_train, y = bench.train[['category']], 
+                bench.model_classifier <- cv.glmnet(x = bench.dtm_train, y = bench.train[['category']], 
                                                      # family = 'binomial',
                                                      # type.measure = 'deviance',
                                                      family = 'multinomial', 
@@ -975,24 +986,24 @@
                 
               ); print(sprintf('bench.glmnet_classifier.time: %0.2fm', bench.glmnet_classifier.time[[3]]/60))
               
-              res.coefs <- as.data.frame(as.matrix(coef(bench.glmnet_classifier)[[1]]))
-              for (ii in 2:length(names(coef(bench.glmnet_classifier)))) {
-                res.coefs <- cbind(res.coefs, as.matrix(coef(bench.glmnet_classifier)[[ii]]))
+              res.coefs <- as.data.frame(as.matrix(coef(bench.model_classifier)[[1]]))
+              for (ii in 2:length(names(coef(bench.model_classifier)))) {
+                res.coefs <- cbind(res.coefs, as.matrix(coef(bench.model_classifier)[[ii]]))
               }
-              colnames(res.coefs) <- names(coef(bench.glmnet_classifier))
+              colnames(res.coefs) <- names(coef(bench.model_classifier))
               res.coefs$sum <- rowSums(res.coefs)
               res.coefs.plain <- res.coefs[which(res.coefs$sum != 0),]
               # dim(which(res.coefs$sum != 0))
               
               # https://stackoverflow.com/questions/27801130/extracting-coefficient-variable-names-from-glmnet-into-a-data-frame
-              # tmp_coeffs <- coef( bench.glmnet_classifier, s = "lambda.min")
+              # tmp_coeffs <- coef( bench.model_classifier, s = "lambda.min")
               # df_coef <- data.frame(name = tmp_coeffs@Dimnames[[1]][tmp_coeffs@i], coefficient = tmp_coeffs@x)
               
               
-              # plot(bench.glmnet_classifier)
+              # plot(bench.model_classifier)
               
               bench.preds.class.time <- system.time(
-                bench.test$bench.preds.class <-  predict(bench.glmnet_classifier, bench.dtm_test, s = "lambda.min", type = 'class')
+                bench.test$bench.preds.class <-  predict(bench.model_classifier, bench.dtm_test, s = "lambda.min", type = 'class')
               ); print(sprintf('bench.preds.class: %0.2fs', bench.preds.class.time[[3]]))
               
               tend <- Sys.time()
@@ -1020,7 +1031,7 @@
               # 
               # print(res)
               
-              save_model(model_name)
+              # save_model(model_name)
               
             }
             
@@ -1309,7 +1320,11 @@
             
             xgb_params$max.depth <- 5
             xgb.nround <- 500
-            bench.xgboost_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, params = xgb_params, nrounds = xgb.nround, verbose = 0)
+            bench.model_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, 
+                                                params = xgb_params, 
+                                                nthread = param.doparall.worker,
+                                                nrounds = xgb.nround, 
+                                                verbose = 0)
             
             # bench.cv.xgboost_classifier <- xgb.cv(data = bench.xgboost_classifier.trainmatrix,
             #        params = xgb_params,
@@ -1324,10 +1339,10 @@
             #        )
             
             # Check the feature importance
-            importance_vars <- xgb.importance(model=bench.xgboost_classifier, feature_names = colnames(bench.xgboost_classifier.trainmatrix))
+            importance_vars <- xgb.importance(model=bench.model_classifier, feature_names = colnames(bench.xgboost_classifier.trainmatrix))
             # head(importance_vars, 20)
             
-            bench.xgboost.preds <- predict(bench.xgboost_classifier, newdata = bench.dtm_test, type = 'class')
+            bench.xgboost.preds <- predict(bench.model_classifier, newdata = bench.dtm_test, type = 'class')
             bench.test$bench.xgboost.preds <- levels(bench.train$category)[bench.xgboost.preds]
             
             tend <- Sys.time()
@@ -1338,16 +1353,117 @@
             
             bench.xgboost_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
             
-            xgb.importance_matrix <- xgb.importance(bench.dtm_train@Dimnames[[2]], model = bench.xgboost_classifier)
+            xgb.importance_matrix <- xgb.importance(bench.dtm_train@Dimnames[[2]], model = bench.model_classifier)
             # head(xgb.importance_matrix, 20)
             
             # xgb.ggplot.importance(head(xgb.importance_matrix,20))
-            # xgb.ggplot.deepness(model = bench.xgboost_classifier)
+            # xgb.ggplot.deepness(model = bench.model_classifier)
+            
+            # xgb.ggplot.importance(res.xgboost.gen_importance_matrix, top_n = 30, n_clusters = length(res.xgboost.gen_catlevels), rel_to_first = TRUE)
             
             print(bench.xgboost_classifier.accuracy)
             print(difftime(tend, t0, units = 'mins'))
           }
           
+          if(param.bench.xgboost.cv)
+          {
+            cat('\n','------------------------------------')
+            cat('\n','Xg Boost CV :\n')
+            
+            suppressWarnings(suppressMessages(library(xgboost)))
+            suppressWarnings(suppressMessages(library(caret)))
+            
+            gc()
+            t0 <- Sys.time()
+            res.model <- 'xgboost.cv'
+            
+            # xgboost.cv.predicted <- 'subcategory'
+            xgboost.cv.predicted <- 'category'
+            
+            # seq(10,100, length.out = 10)
+            # ceiling(exp(seq(log(10),log(100), length.out = 10)))
+            xgbGrid <- expand.grid(
+              nrounds = c(1, 5, 10), # c(1, 10, 100, 500, 1000)
+              max_depth = c(1, 2, 4), # c(1, 2, 5, 10, 20)
+              eta = c(0.1, 0.05, 0.001), # c(0.1, 0.05, 0.001, 0.0005)
+              gamma = c(0, 2, 5),
+              # verbose = 1
+              colsample_bytree = 1, #default 1
+              min_child_weight = 1, # default 1
+              subsample = 1 #, # default 1,
+              # max_delta_step = 0 # default 0
+            )
+            
+            xgbTrControl <- trainControl(
+              # method = "repeatedcv",
+              method = "cv",
+              number = 3,
+              # repeats = 2,
+              verboseIter = TRUE,
+              returnData = FALSE,
+              allowParallel = TRUE,
+              returnResamp = "final", #'all'
+              # classProbs = TRUE, 
+              summaryFunction = multiClassSummary
+            )
+            
+            xgbTrain <- train(
+              x = as.matrix(bench.dtm_train),
+              # x = bench.dtm_train, 
+              y = bench.train[[xgboost.cv.predicted]],
+              num_class = length(levels(bench.train[[xgboost.cv.predicted]])) + 1,
+              objective = "multi:softmax",
+              trControl = xgbTrControl,
+              tuneGrid = xgbGrid,
+              method = "xgbTree",
+              model = FALSE
+            )
+            
+            # scatter plot of the AUC against max_depth and eta
+            ggplot(xgbTrain$results, aes(x = as.factor(eta), y = max_depth, size = ROC, color = ROC)) +
+              geom_point() +
+              theme_bw() +
+              scale_size_continuous(guide = "none")
+            
+            # get the top model and its results
+            head(xgbTrain$results[with(xgbTrain$results, order(RMSE)), ], 1)
+            # MSE 3.12 ^ 2 = 9.74
+            # yhatXgb <- predict(xgbTrain, newdata = dfTest)
+            # mean((yhatXgb - dfTest$medv) ^ 2) # 10.49
+            
+            bench.xgboost.cv.preds <- predict(xgbTrain, newdata = bench.dtm_test, type = 'class')
+            bench.test$bench.xgboost.cv.preds <- levels(bench.train$category)[bench.xgboost.cv.preds]
+            
+            tend <- Sys.time()
+            res.time <- difftime(tend, t0, units = 'secs')
+            res.confmat <- confusionMatrix(bench.test$bench.xgboost.cv.preds, bench.test$category)
+            res.accuracy <- 100*(dim(bench.test)[[1]] - count(bench.test[category != bench.xgboost.cv.preds]))/dim(bench.test)[[1]] 
+            save_results()
+            
+            bench.xgboost.cv_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
+            
+            
+            # plot(dfTest$medv, yhatXgb, col = "red")
+            # abline(0, 1, col = "blue")
+            
+            # Variable Importance
+            # names <- names(dfTrain)[! names(dfTrain) %in% c("medv")]
+            # importanceMatrix <- xgb.importance(names, model = xgbTrain$finalModel)
+            
+            # xgb.importance_matrix <- xgb.importance(bench.dtm_train@Dimnames[[2]], model = bench.model_classifier)
+            bench.xgboost.cv.xgb.importance_matrix <- xgb.importance(bench.dtm_train@Dimnames[[2]], model = xgbTrain$finalModel)
+            head(bench.xgboost.cv.xgb.importance_matrix, 20)
+            xgb.plot.importance(bench.xgboost.cv.xgb.importance_matrix[1:10,])
+   
+            # xgb.ggplot.importance(head(bench.xgboost.cv.xgb.importance_matrix,20))
+            # xgb.ggplot.deepness(model =  xgbTrain$finalModel)
+            
+            # xgb.ggplot.importance(res.xgboost.gen_importance_matrix, top_n = 30, n_clusters = length(res.xgboost.gen_catlevels), rel_to_first = TRUE)
+            
+            print(bench.xgboost.cv_classifier.accuracy)
+            print(difftime(tend, t0, units = 'mins'))
+            
+          }
           
           
           # --------------- SVM kernlab, OK moins bon resultats
