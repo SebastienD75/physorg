@@ -1398,6 +1398,7 @@
               )
               
               param.xgboost.grid.eta <- 2/parameterList[["nrounds"]]
+              param.xgboost.grid.eta <- 10/parameterList[["nrounds"]]
               
               bench.cv.xgboost.grid_classifier <- xgb.cv(data = bench.xgboost_classifier.trainmatrix,
                                                          num_class = length(levels(bench.train[[param.bench.xgboost.predicted]])) + 1,
