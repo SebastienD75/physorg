@@ -134,7 +134,7 @@
 {
   ## -- PIPLINE --
   param.dotfidf = TRUE
-  param.doprune = FALSE
+  param.doprune = TRUE
   param.dongram = FALSE
   param.dostem = FALSE
   param.dofeaturehashing = FALSE # incompatible avec prune
@@ -635,6 +635,9 @@ if(param_rename.and.clean)
   res.recommender10_users <- d.com.user.actifs
   rm(d.com.user.actifs)
   
+  res.recommender10_mean.dist <- t.mean.dist
+  res.recommender10_max.dist <- t.max.dist
+ 
   t.lst_param <- ls()[grepl('^param\\.',ls())]
   t.lst_newparam <- paste0('res.recommender10_', t.lst_param)
   t.expr <- paste0(t.lst_newparam, ' <- ', t.lst_param)
