@@ -240,7 +240,7 @@
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(3000), length.out = param.maxmodel.nblines_max))))
     # param.nblines_max.inc <- c(param.nblines_max.default, ceiling(seq(500,2000, length.out = param.maxmodel.nblines_max)))
     
-    param.train_test <- 0.7 # ! 0.7
+    param.train_test <- 0.9 # ! 0.7
     chk('param.train_test', 0.7, TRUE)
     
     
@@ -306,7 +306,7 @@
     ## -- MODELS --
     # cat('\n', '-- Params MODELS --','\n')
     
-    param.evaluate_model = FALSE # TRUE par default !
+    param.evaluate_model = TRUE # TRUE par default !
     chk('param.evaluate_model', TRUE)
     
     param.bench.glmnet = FALSE
@@ -1313,13 +1313,13 @@
             xgb_params = list(
               objective = "multi:softmax",
               num_class = length(levels(bench.train[[param.bench.xgboost.predicted]])) + 1,
-              eta = 0.01,
+              eta = 0.1,
               max.depth = 10,
               eval_metric = "mlogloss")
             
             bench.xgboost_classifier.trainmatrix <- xgb.DMatrix(bench.dtm_train, label = bench.train[[param.bench.xgboost.predicted]])
             
-            xgb.nround <- 5
+            xgb.nround <- 100
             bench.model_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, 
                                                 params = xgb_params, 
                                                 nthread = param.doparall.worker,
@@ -1369,11 +1369,12 @@
             # searchGridSubCol <- expand.grid(subsample = c(0.1, 0.3, 0.5),
             #                                 colsample_bytree = c(0.6, 0.8, 1))
 
-            param.xgboost.grid.early_stopping_rounds <- 5
-            param.xgboost.grid.searchGrid <- expand.grid(subsample = c(0.1, 0.3, 0.5),
-                                                         colsample_bytree = c(0.2, 0.5, 0.8),
-                                                         nrounds = c(3, 10, 20),
-                                                         xgb_max.depth = c(10, 50, 100)
+            param.xgboost.grid.early_stopping_rounds <- 3
+            param.xgboost.grid.nfold <- 3
+            param.xgboost.grid.searchGrid <- expand.grid(subsample = c(0.1, 0.3, 0.5, 0.8),
+                                                         colsample_bytree = c(0.2, 0.5, 1),
+                                                         nrounds = c(3, 10, 20, 100),
+                                                         xgb_max.depth = c(3, 5, 10, 50)
             )
             
             bench.xgboost_classifier.trainmatrix <- xgb.DMatrix(bench.dtm_train, label = bench.train[[param.bench.xgboost.predicted]])
@@ -1392,7 +1393,7 @@
               gc()
               t0 <- Sys.time()
               
-              cat(sprintf("[%d/%d] \n Params :", t.current.it, nrow(param.xgboost.grid.searchGrid)),
+              cat(sprintf("\n\n [%d/%d] Params :", t.current.it, nrow(param.xgboost.grid.searchGrid)),
                   '\n current.subsample:', parameterList[["subsample"]],
                   '\n current.colsample_bytree:', parameterList[["colsample_bytree"]],
                   '\n current.xgb_max.depth:', parameterList[["xgb_max.depth"]],
@@ -1400,7 +1401,7 @@
               )
               
               # param.xgboost.grid.eta <- 2/parameterList[["nrounds"]]
-              param.xgboost.grid.eta <- 10/parameterList[["nrounds"]]
+              param.xgboost.grid.eta <- 5/parameterList[["nrounds"]]
               
               bench.cv.xgboost.grid_classifier <- xgb.cv(data = bench.xgboost_classifier.trainmatrix,
                                                          num_class = length(levels(bench.train[[param.bench.xgboost.predicted]])) + 1,
@@ -1411,7 +1412,7 @@
                                                          showsd = TRUE,
                                                          verbose = TRUE,
                                                          nthread = param.doparall.worker,
-                                                         nfold = param.doparall.worker,
+                                                         nfold = param.xgboost.grid.nfold,
                                                          prediction = TRUE,
                                                          early_stopping_rounds = param.xgboost.grid.early_stopping_rounds,
                                                          eta = param.xgboost.grid.eta,
