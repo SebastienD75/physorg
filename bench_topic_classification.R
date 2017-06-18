@@ -1313,13 +1313,13 @@
             xgb_params = list(
               objective = "multi:softmax",
               num_class = length(levels(bench.train[[param.bench.xgboost.predicted]])) + 1,
-              eta = 0.01,
+              eta = 0.1,
               max.depth = 10,
               eval_metric = "mlogloss")
             
             bench.xgboost_classifier.trainmatrix <- xgb.DMatrix(bench.dtm_train, label = bench.train[[param.bench.xgboost.predicted]])
             
-            xgb.nround <- 5
+            xgb.nround <- 100
             bench.model_classifier <- xgboost(data = bench.xgboost_classifier.trainmatrix, 
                                                 params = xgb_params, 
                                                 nthread = param.doparall.worker,
@@ -1370,6 +1370,7 @@
             #                                 colsample_bytree = c(0.6, 0.8, 1))
 
             param.xgboost.grid.early_stopping_rounds <- 3
+            param.xgboost.grid.nfold <- 3
             param.xgboost.grid.searchGrid <- expand.grid(subsample = c(0.5),
                                                          colsample_bytree = c(1),
                                                          nrounds = c(40),
@@ -1410,8 +1411,8 @@
                                                          # metrics = list("rmse","auc"), # when it is not specified, the evaluation metric is chosen according to objective function. 
                                                          showsd = TRUE,
                                                          verbose = TRUE,
-                                                         nthread = 4,
-                                                         nfold = 3,
+                                                         nthread = param.doparall.worker,
+                                                         nfold = param.xgboost.grid.nfold,
                                                          prediction = TRUE,
                                                          early_stopping_rounds = param.xgboost.grid.early_stopping_rounds,
                                                          eta = param.xgboost.grid.eta,
