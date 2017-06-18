@@ -240,7 +240,7 @@
     param.nblines_max.inc <- c(param.nblines_max.default, ceiling(exp(seq(log(500),log(3000), length.out = param.maxmodel.nblines_max))))
     # param.nblines_max.inc <- c(param.nblines_max.default, ceiling(seq(500,2000, length.out = param.maxmodel.nblines_max)))
     
-    param.train_test <- 0.7 # ! 0.7
+    param.train_test <- 0.9 # ! 0.7
     chk('param.train_test', 0.7, TRUE)
     
     
@@ -276,10 +276,10 @@
     param.prune.term_count_min.default = 80
     chk('param.prune.term_count_min.default', 80)
     
-    param.prune.doc_proportion_max.default = 0.9 # 0.8 # 0.4 # (default pkg 1)
+    param.prune.doc_proportion_max.default = 1 # 0.8 # 0.4 # (default pkg 1)
     chk('param.prune.doc_proportion_max.default', 1)
     
-    param.prune.doc_proportion_min.default = 0.0008 # 0.002 # 0.0008 # (default pkg 0)
+    param.prune.doc_proportion_min.default = 0 # 0.002 # 0.0008 # (default pkg 0)
     chk('param.prune.doc_proportion_min.default', 0)
     
     param.startmodel.prune = 1
@@ -306,7 +306,7 @@
     ## -- MODELS --
     # cat('\n', '-- Params MODELS --','\n')
     
-    param.evaluate_model = FALSE # TRUE par default !
+    param.evaluate_model = TRUE # TRUE par default !
     chk('param.evaluate_model', TRUE)
     
     param.bench.glmnet = FALSE
@@ -319,7 +319,7 @@
     chk('param.bench.xgboost', FALSE)
     
     param.bench.xgboost.predicted = 'subcategory'
-    chk('param.bench.xgboost.predicted', FALSE)
+    chk('param.bench.xgboost.predicted', 'subcategory')
     
     param.bench.xgboost.grid = TRUE
     chk('param.bench.xgboost.grid', FALSE)
@@ -1369,11 +1369,11 @@
             # searchGridSubCol <- expand.grid(subsample = c(0.1, 0.3, 0.5),
             #                                 colsample_bytree = c(0.6, 0.8, 1))
 
-            param.xgboost.grid.early_stopping_rounds <- 5
-            param.xgboost.grid.searchGrid <- expand.grid(subsample = c(0.1, 0.3, 0.5),
-                                                         colsample_bytree = c(0.2, 0.5, 0.8),
-                                                         nrounds = c(3, 10, 20),
-                                                         xgb_max.depth = c(10, 50, 100)
+            param.xgboost.grid.early_stopping_rounds <- 3
+            param.xgboost.grid.searchGrid <- expand.grid(subsample = c(0.5),
+                                                         colsample_bytree = c(1),
+                                                         nrounds = c(40),
+                                                         xgb_max.depth = c(3, 5, 8, 15, 50)
             )
             
             bench.xgboost_classifier.trainmatrix <- xgb.DMatrix(bench.dtm_train, label = bench.train[[param.bench.xgboost.predicted]])
@@ -1384,7 +1384,7 @@
             t.best.param.current.colsample_bytree <- 0
             t.best.param.current.xgb_max.depth <- 0
             t.best.param.current.nrounds <- 0
-            t.best.current.it <- 0
+            xgboost.grid.best.it <- 0
             
             t.current.it <- 1
             res.param.bench.xgboost.grid <- apply(param.xgboost.grid.searchGrid, 1, function(parameterList){ 
@@ -1392,7 +1392,7 @@
               gc()
               t0 <- Sys.time()
               
-              cat(sprintf("[%d/%d] \n Params :", t.current.it, nrow(param.xgboost.grid.searchGrid)),
+              cat(sprintf("\n\n New it, [%d/%d] Params :", t.current.it, nrow(param.xgboost.grid.searchGrid)),
                   '\n current.subsample:', parameterList[["subsample"]],
                   '\n current.colsample_bytree:', parameterList[["colsample_bytree"]],
                   '\n current.xgb_max.depth:', parameterList[["xgb_max.depth"]],
@@ -1400,7 +1400,7 @@
               )
               
               # param.xgboost.grid.eta <- 2/parameterList[["nrounds"]]
-              param.xgboost.grid.eta <- 10/parameterList[["nrounds"]]
+              param.xgboost.grid.eta <- 5/parameterList[["nrounds"]]
               
               bench.cv.xgboost.grid_classifier <- xgb.cv(data = bench.xgboost_classifier.trainmatrix,
                                                          num_class = length(levels(bench.train[[param.bench.xgboost.predicted]])) + 1,
@@ -1410,8 +1410,8 @@
                                                          # metrics = list("rmse","auc"), # when it is not specified, the evaluation metric is chosen according to objective function. 
                                                          showsd = TRUE,
                                                          verbose = TRUE,
-                                                         nthread = param.doparall.worker,
-                                                         nfold = param.doparall.worker,
+                                                         nthread = 4,
+                                                         nfold = 3,
                                                          prediction = TRUE,
                                                          early_stopping_rounds = param.xgboost.grid.early_stopping_rounds,
                                                          eta = param.xgboost.grid.eta,
@@ -1426,25 +1426,27 @@
               bench.xgboost.grid.preds <- levels(bench.train[[param.bench.xgboost.predicted]])[bench.xgboost.grid.preds]
               
               tend <- Sys.time()
-              res.time <- difftime(tend, t0, units = 'secs')
-              res.confmat <- confusionMatrix(bench.xgboost.grid.preds, bench.train[[param.bench.xgboost.predicted]])
-              res.accuracy <- res.confmat$overall[['Accuracy']]
+              res.time <<- difftime(tend, t0, units = 'secs')
+              res.confmat <<- confusionMatrix(bench.xgboost.grid.preds, bench.train[[param.bench.xgboost.predicted]])
+              res.accuracy <<- res.confmat$overall[['Accuracy']]
               save_results()
               
               bench.xgboost.grid_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
+              bench.xgboost.grid_classifier.t.res.test_mlogloss_mean <- sprintf("t.res.test_mlogloss_mean : %0.2f %%", t.res.test_mlogloss_mean)
             
-              if(t.res.test_mlogloss_mean > t.best.res.test_mlogloss_mean) {
-                t.best.current.it <- t.current.it
-                t.best.res.test_mlogloss_mean <- t.res.test_mlogloss_mean
-                t.best.accuracy <- res.accuracy
-                t.best.param.current.subsample <- parameterList[["subsample"]]
-                t.best.param.current.colsample_bytree <- parameterList[["colsample_bytree"]]
-                t.best.param.current.xgb_max.depth <- parameterList[["xgb_max.depth"]]
-                t.best.param.current.nrounds <- parameterList[["nrounds"]] 
+              if(res.accuracy > t.best.accuracy) {
+                xgboost.grid.best.it <<- t.current.it
+                t.best.res.test_mlogloss_mean <<- t.res.test_mlogloss_mean
+                t.best.accuracy <<- res.accuracy
+                t.best.param.current.subsample <<- parameterList[["subsample"]]
+                t.best.param.current.colsample_bytree <<- parameterList[["colsample_bytree"]]
+                t.best.param.current.xgb_max.depth <<- parameterList[["xgb_max.depth"]]
+                t.best.param.current.nrounds <<- parameterList[["nrounds"]] 
               }
               
               cat(sprintf("\n\n [%d/%d] Results :", t.current.it, nrow(param.xgboost.grid.searchGrid)))
               cat('\n', bench.xgboost.grid_classifier.accuracy)
+              cat('\n', bench.xgboost.grid_classifier.t.res.test_mlogloss_mean)
               cat('\n Time :', difftime(tend, t0, units = 'mins'))
               cat('\n Best :',
                   '\n t.best.res.test_mlogloss_mean:',t.best.res.test_mlogloss_mean,
