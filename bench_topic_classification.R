@@ -168,7 +168,7 @@
     p.runid <- round(as.numeric(Sys.time()))
     
     param.doparall.worker = detectCores() - 1
-    chk('param.doparall.worker', detectCores() - 1)
+    chk('param.doparall.worker', param.doparall.worker)
     
     ## -- PIPLINE --
     # cat('\n', '-- Params PIPLINE --','\n')
@@ -1423,8 +1423,7 @@
               
               t.res.test_mlogloss_mean <- tail(bench.cv.xgboost.grid_classifier$evaluation_log$test_mlogloss_mean,1)
  
-              bench.xgboost.grid.preds <- bench.cv.xgboost.grid_classifier$pred[, bench.cv.xgboost.grid_classifier$best_iteration]
-              bench.xgboost.grid.preds <- levels(bench.train[[param.bench.xgboost.predicted]])[bench.xgboost.grid.preds]
+              bench.xgboost.grid.preds <- levels(bench.train[[param.bench.xgboost.predicted]])[bench.cv.xgboost.grid_classifier$pred]
               
               tend <- Sys.time()
               res.time <<- difftime(tend, t0, units = 'secs')
@@ -1432,6 +1431,7 @@
               res.accuracy <<- res.confmat$overall[['Accuracy']]
               save_results()
               
+              bench.xgboost.grid_classifier.curr.best_it <- sprintf("Current best it : %d", bench.cv.xgboost.grid_classifier$best_iteration)
               bench.xgboost.grid_classifier.t.res.test_mlogloss_mean <- sprintf("Mlogloss mean : 0.3f %%", t.res.test_mlogloss_mean)
               bench.xgboost.grid_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
             
@@ -1446,6 +1446,7 @@
               }
               
               cat(sprintf("\n\n [%d/%d] Results :", t.current.it, nrow(param.xgboost.grid.searchGrid)))
+              cat('\n', bench.xgboost.grid_classifier.curr.best_it)
               cat('\n', bench.xgboost.grid_classifier.accuracy)
               cat('\n', bench.xgboost.grid_classifier.t.res.test_mlogloss_mean)
               cat('\n Time :', difftime(tend, t0, units = 'mins'))
