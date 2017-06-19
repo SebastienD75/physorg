@@ -1432,10 +1432,10 @@
               res.accuracy <<- res.confmat$overall[['Accuracy']]
               save_results()
               
+              bench.xgboost.grid_classifier.t.res.test_mlogloss_mean <- sprintf("Mlogloss mean : 0.3f %%", t.res.test_mlogloss_mean)
               bench.xgboost.grid_classifier.accuracy <- sprintf("Accuracy : %0.2f %%", res.accuracy)
-              bench.xgboost.grid_classifier.t.res.test_mlogloss_mean <- sprintf("t.res.test_mlogloss_mean : %0.2f %%", t.res.test_mlogloss_mean)
             
-              if(res.accuracy > t.best.accuracy) {
+              if(t.res.test_mlogloss_mean < t.best.res.test_mlogloss_mean) {
                 xgboost.grid.best.it <<- t.current.it
                 t.best.res.test_mlogloss_mean <<- t.res.test_mlogloss_mean
                 t.best.accuracy <<- res.accuracy
@@ -1462,7 +1462,8 @@
                             t.res.test_mlogloss_mean, 
                             res.accuracy, 
                             res.time, 
-                            res.confmat)
+                            res.confmat,
+                            bench.cv.xgboost.grid_classifier)
               
               t.current.it <<- t.current.it+1
               
